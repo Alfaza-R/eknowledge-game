@@ -1,4 +1,4 @@
-/* style.css — styling client. Papan = CSS grid 3x3. */
+/* style.css — Eknowledge Game */
 
 :root {
   --bg: #0f1115;
@@ -10,6 +10,11 @@
   --line: #2a2f3a;
   --danger: #ff6b6b;
   --ok: #4ade80;
+  /* warna uno */
+  --uno-red: #e4483b;
+  --uno-yellow: #f2b400;
+  --uno-green: #3fae4a;
+  --uno-blue: #3b7de4;
 }
 
 * { box-sizing: border-box; }
@@ -26,7 +31,7 @@ body {
   padding: 1rem;
 }
 
-#game-root { width: 100%; max-width: 380px; }
+#game-root { width: 100%; max-width: 460px; }
 
 .screen {
   background: var(--panel);
@@ -35,90 +40,77 @@ body {
   padding: 1.5rem;
   text-align: center;
 }
-
 .hidden { display: none !important; }
 
 h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
 h2 { margin: 0 0 1rem; }
-.sub { color: var(--muted); margin: 0 0 1.5rem; }
+.sub { color: var(--muted); margin: 0 0 1.25rem; }
 
 label { display: block; text-align: left; color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
-
 input {
-  width: 100%;
-  margin-top: .35rem;
-  padding: .7rem .8rem;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #12151b;
-  color: var(--fg);
-  font-size: 1rem;
+  width: 100%; margin-top: .35rem; padding: .7rem .8rem;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: #12151b; color: var(--fg); font-size: 1rem;
 }
-#input-room { text-transform: uppercase; letter-spacing: 2px; }
+#input-room, #input-room-select { text-transform: uppercase; letter-spacing: 2px; }
 
 button {
-  border: 0;
-  border-radius: 10px;
-  padding: .7rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  font-weight: 600;
+  border: 0; border-radius: 10px; padding: .7rem 1rem;
+  font-size: 1rem; cursor: pointer; font-weight: 600;
 }
-button.primary { background: var(--accent); color: white; width: 100%; }
+button.primary { background: var(--accent); color: #fff; width: 100%; margin-top: .5rem; }
 button.primary:hover { background: var(--accent-2); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button:disabled:hover { background: var(--accent); }
 button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-#btn-join { background: #2a2f3a; color: var(--fg); }
+#btn-join, #btn-join-select { background: #2a2f3a; color: var(--fg); }
+
+.link-back {
+  background: none; color: var(--muted); padding: 0; float: left;
+  font-weight: 400; font-size: .85rem; margin-bottom: .5rem;
+}
+.link-back:hover { color: var(--fg); }
 
 .divider { color: var(--muted); margin: 1.1rem 0; font-size: .85rem; }
 .join-row { display: flex; gap: .5rem; }
 .join-row input { margin-top: 0; }
+.error { color: var(--danger); min-height: 1.2em; margin: .5rem 0 0; }
+.hint { color: var(--muted); font-size: .85rem; }
+.code { font-family: ui-monospace, monospace; letter-spacing: 3px; color: var(--accent); }
 
-.code {
-  font-family: ui-monospace, monospace;
-  letter-spacing: 3px;
-  color: var(--accent);
+/* ---- Layar pilih game ---- */
+#game-list { display: grid; gap: .6rem; }
+.game-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .15rem;
+  background: #12151b; border: 1px solid var(--line); border-radius: 12px;
+  padding: .9rem 1rem; text-align: left; color: var(--fg); width: 100%;
 }
+.game-card:hover:not(.disabled) { border-color: var(--accent); }
+.game-card.disabled { opacity: .5; cursor: not-allowed; }
+.game-emoji { font-size: 1.4rem; }
+.game-name { font-size: 1.05rem; font-weight: 700; }
+.game-desc { font-size: .8rem; color: var(--muted); }
 
+/* ---- Lobby ---- */
 #player-list { list-style: none; padding: 0; margin: 1.2rem 0; text-align: left; }
 #player-list li {
-  padding: .6rem .8rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  margin-bottom: .5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: .6rem .8rem; border: 1px solid var(--line); border-radius: 10px;
+  margin-bottom: .5rem; display: flex; justify-content: space-between; align-items: center;
 }
 .badge { font-size: .7rem; color: var(--muted); }
 .badge.host { color: var(--accent); }
 .badge.off { color: var(--danger); }
 
-.hint { color: var(--muted); font-size: .85rem; }
-.error { color: var(--danger); min-height: 1.2em; margin: .5rem 0 0; }
+/* ---- Umum in-game ---- */
+.turn { font-size: 1.05rem; margin: .8rem 0; min-height: 1.4em; }
+.result { font-size: 1.3rem; font-weight: 700; margin: 1rem 0; }
 
-.turn { font-size: 1.1rem; margin: 0 0 1rem; min-height: 1.4em; }
-
-/* Papan 3x3 */
-#board {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  aspect-ratio: 1 / 1;
-}
+/* ---- Tic-tac-toe ---- */
+#board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; aspect-ratio: 1/1; }
 .cell {
-  background: #12151b;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 2.6rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background .15s, transform .05s;
-  user-select: none;
+  background: #12151b; border: 1px solid var(--line); border-radius: 10px;
+  font-size: 2.6rem; font-weight: 700; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; transition: background .15s, transform .05s; user-select: none;
 }
 .cell:hover:not(.filled) { background: #1c212b; }
 .cell:active:not(.filled) { transform: scale(.97); }
@@ -127,4 +119,63 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
 .cell.o { color: var(--ok); }
 .cell.disabled { pointer-events: none; }
 
-.result { font-size: 1.3rem; font-weight: 700; margin: 1rem 0; }
+/* ---- Uno ---- */
+.uno-opponents { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: .8rem; }
+.uno-opp {
+  background: #12151b; border: 1px solid var(--line); border-radius: 10px;
+  padding: .4rem .6rem; min-width: 76px;
+}
+.uno-opp.turn { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.uno-opp-name { font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.uno-opp-count { font-size: .85rem; color: var(--muted); }
+.uno-badge { color: var(--danger); font-weight: 700; font-size: .7rem; }
+
+.uno-center { margin: .3rem 0 .6rem; }
+.uno-info { font-size: .9rem; color: var(--muted); }
+.uno-info .dir { margin-left: .4rem; font-size: 1.1rem; color: var(--fg); }
+.color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: .2rem; }
+.color-dot.red { background: var(--uno-red); }
+.color-dot.yellow { background: var(--uno-yellow); }
+.color-dot.green { background: var(--uno-green); }
+.color-dot.blue { background: var(--uno-blue); }
+
+.uno-pile-row { display: flex; gap: 1rem; justify-content: center; align-items: center; margin: .6rem 0; }
+.uno-last { font-size: .8rem; color: var(--muted); min-height: 1.1em; margin: .2rem 0 0; }
+
+.uno-card {
+  width: 46px; height: 68px; border-radius: 9px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: 800; color: #fff; user-select: none;
+  border: 2px solid rgba(255,255,255,.85); box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.uno-card.red { background: var(--uno-red); }
+.uno-card.yellow { background: var(--uno-yellow); color: #3a2c00; border-color: rgba(0,0,0,.25); }
+.uno-card.green { background: var(--uno-green); }
+.uno-card.blue { background: var(--uno-blue); }
+.uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
+.uno-card.deck {
+  flex-direction: column; background: #10131a; color: var(--muted);
+  border-style: dashed; font-size: .7rem; letter-spacing: 1px; gap: 2px;
+}
+.uno-card.deck small { font-size: 1rem; font-weight: 700; color: var(--fg); }
+.uno-card.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 1px; }
+.uno-card.playable:hover { transform: translateY(-6px); transition: transform .1s; }
+
+.uno-hand {
+  display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center;
+  margin-top: .4rem; max-height: 190px; overflow-y: auto;
+}
+
+/* pemilih warna wild */
+.color-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.color-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; text-align: center; }
+.color-box p { margin: 0 0 .8rem; }
+.color-choices { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.color-choice { width: 64px; height: 64px; border-radius: 12px; border: 2px solid rgba(255,255,255,.85); }
+.color-choice.red { background: var(--uno-red); }
+.color-choice.yellow { background: var(--uno-yellow); }
+.color-choice.green { background: var(--uno-green); }
+.color-choice.blue { background: var(--uno-blue); }

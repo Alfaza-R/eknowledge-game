@@ -3,16 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Eknowledge Game — Tic-Tac-Toe</title>
+  <title>Eknowledge Game</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="game-root">
 
-    <!-- SCREEN 1: home (bikin / gabung room) -->
-    <section id="screen-home" class="screen">
+    <!-- SCREEN 0: pilih game -->
+    <section id="screen-select" class="screen hidden">
       <h1>Eknowledge Game</h1>
-      <p class="sub">Tic-Tac-Toe bareng tim kantor</p>
+      <p class="sub">Pilih game buat main bareng tim</p>
+      <div id="game-list"></div>
+      <div class="divider">atau</div>
+      <div class="join-row">
+        <input id="input-room-select" type="text" placeholder="Kode room" maxlength="6" />
+        <button id="btn-join-select">Gabung</button>
+      </div>
+      <p id="select-error" class="error"></p>
+    </section>
+
+    <!-- SCREEN 1: home (bikin/gabung room buat 1 game) -->
+    <section id="screen-home" class="screen hidden">
+      <button id="btn-back" class="link-back">← Pilih game lain</button>
+      <h1 id="home-title">Game</h1>
+      <p class="sub" id="home-sub"></p>
 
       <label>Nama kamu
         <input id="input-name" type="text" placeholder="Nama kamu" maxlength="20" />
@@ -32,21 +46,20 @@
 
     <!-- SCREEN 2: lobby -->
     <section id="screen-lobby" class="screen hidden">
+      <p class="sub" id="lobby-game"></p>
       <h2>Room <span id="lobby-code" class="code"></span></h2>
       <button id="btn-copy" class="ghost">Salin link undangan</button>
-
       <ul id="player-list"></ul>
-
       <button id="btn-start" class="primary hidden">Mulai</button>
       <p id="lobby-hint" class="hint"></p>
     </section>
 
-    <!-- SCREEN 3: game -->
-    <section id="screen-game" class="screen hidden">
-      <p id="turn-banner" class="turn"></p>
-      <div id="board"></div>
-      <p id="result" class="result hidden"></p>
-      <button id="btn-again" class="primary hidden">Main lagi</button>
+    <!-- SCREEN 3: game (diisi per-game oleh client.js) -->
+    <section id="screen-game" class="screen hidden"></section>
+
+    <!-- loading kecil pas nyambung via link undangan -->
+    <section id="screen-loading" class="screen hidden">
+      <p class="sub">Menyambung ke room…</p>
     </section>
 
   </div>

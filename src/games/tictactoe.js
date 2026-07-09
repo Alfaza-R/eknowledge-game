@@ -26,6 +26,10 @@ const LINES = [
 ];
 
 module.exports = {
+  name: "Tic-Tac-Toe",
+  minPlayers: 2,
+  maxPlayers: 2,
+
   // players = [{ id, name }, ...]. Pemain pertama pegang "X" dan jalan duluan.
   init(players) {
     return {

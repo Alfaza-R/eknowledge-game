@@ -50,12 +50,13 @@ function getRoom(roomId) {
   return rooms.get(roomId);
 }
 
-// Masukin pemain ke room. Return { ok, error?, room? }.
-function joinRoom(roomId, player) {
+// Masukin pemain ke room. maxPlayers beda tiap game (ttt=2, uno=8).
+// Return { ok, error?, room? }.
+function joinRoom(roomId, player, maxPlayers = 2) {
   const room = rooms.get(roomId);
   if (!room) return { ok: false, error: "Room gak ketemu" };
   if (room.status !== "lobby") return { ok: false, error: "Game udah mulai" };
-  if (room.players.length >= 2) return { ok: false, error: "Room udah penuh" };
+  if (room.players.length >= maxPlayers) return { ok: false, error: "Room udah penuh" };
 
   room.players.push({ id: player.id, name: player.name, connected: true });
   return { ok: true, room };

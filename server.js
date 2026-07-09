@@ -13,8 +13,8 @@ const roomStore = require("./src/rooms");
 // Registry game: gameType -> module. Nambah game baru = tambah satu baris di sini.
 const games = {
   tictactoe: require("./src/games/tictactoe"),
+  uno: require("./src/games/uno"),
   // ludo: require("./src/games/ludo"),
-  // uno: require("./src/games/uno"),
 };
 
 const app = express();
@@ -77,9 +77,12 @@ function broadcastRoom(room) {
 // ---------------------------------------------------------------------------
 io.on("connection", (socket) => {
   // --- Bikin room ---
-  socket.on("createRoom", ({ name }, cb) => {
+  socket.on("createRoom", ({ name, game }, cb) => {
+    // Tiap page WordPress kirim ?game=... (tictactoe/ludo/uno). Kalau game-nya belum
+    // ada / belum diimplement, fallback ke tictactoe biar gak error.
+    const gameType = games[game] ? game : "tictactoe";
     const playerName = (name || "Guest").slice(0, 20);
-    const room = roomStore.createRoom("tictactoe", { id: socket.id, name: playerName });
+    const room = roomStore.createRoom(gameType, { id: socket.id, name: playerName });
     socket.join(room.id);
     if (cb) cb({ ok: true, roomId: room.id });
     broadcastRoom(room);
@@ -88,7 +91,9 @@ io.on("connection", (socket) => {
   // --- Gabung room ---
   socket.on("joinRoom", ({ roomId, name }, cb) => {
     const playerName = (name || "Guest").slice(0, 20);
-    const result = roomStore.joinRoom(roomId, { id: socket.id, name: playerName });
+    const existing = roomStore.getRoom(roomId);
+    const maxPlayers = existing && games[existing.gameType] ? games[existing.gameType].maxPlayers : 2;
+    const result = roomStore.joinRoom(roomId, { id: socket.id, name: playerName }, maxPlayers);
     if (!result.ok) {
       if (cb) cb({ ok: false, error: result.error });
       return;
@@ -104,24 +109,26 @@ io.on("connection", (socket) => {
     if (!room) return;
     if (room.hostId !== socket.id) return;        // bukan host
     if (room.status !== "lobby") return;          // udah jalan
-    if (room.players.length < 2) return;          // belum cukup pemain
 
     const game = games[room.gameType];
+    const minPlayers = game.minPlayers || 2;
+    if (room.players.length < minPlayers) return; // belum cukup pemain
+
     room.state = game.init(room.players);
     room.status = "playing";
     broadcastRoom(room);
   });
 
-  // --- Jalan (taro X/O di kotak) ---
-  socket.on("playMove", ({ roomId, cell }) => {
+  // --- Jalan (move-nya beda tiap game: ttt {cell}, uno {type,cardIndex,chosenColor}) ---
+  socket.on("playMove", ({ roomId, move }) => {
     const room = roomStore.getRoom(roomId);
     if (!room || room.status !== "playing") return;
 
     const game = games[room.gameType];
     // VALIDASI di server — kiriman client gak dipercaya bulat-bulat
-    if (!game.validateMove(room.state, socket.id, { cell })) return;
+    if (!game.validateMove(room.state, socket.id, move)) return;
 
-    room.state = game.applyMove(room.state, { cell });
+    room.state = game.applyMove(room.state, move);
 
     const end = game.checkEnd(room.state);
     if (end !== null) {
@@ -180,10 +187,24 @@ function finalizeLeave(roomId, socketId) {
     room.hostId = room.players[0].id;
   }
 
-  // kalau game lagi jalan dan pemain berkurang, tic-tac-toe (butuh 2) gak bisa lanjut → selesai
-  if (room.status === "playing" && room.players.length < 2) {
-    room.status = "finished";
-    room.result = room.players[0].id; // yang tersisa menang WO
+  if (room.status === "playing") {
+    const game = games[room.gameType];
+    const minPlayers = game.minPlayers || 2;
+
+    // Game yang bisa lanjut walau pemain berkurang (mis. Uno 3+): buang pemainnya
+    // dari state, giliran diatur ulang. Game tanpa removePlayer (ttt) lewat aja.
+    if (game.removePlayer && room.players.length >= minPlayers) {
+      room.state = game.removePlayer(room.state, socketId);
+      const end = game.checkEnd(room.state);
+      if (end !== null) {
+        room.status = "finished";
+        room.result = end;
+      }
+    } else if (room.players.length < minPlayers) {
+      // pemain gak cukup buat lanjut → selesai, sisanya menang WO
+      room.status = "finished";
+      room.result = room.players[0].id;
+    }
   }
 
   broadcastRoom(room);
