@@ -285,18 +285,24 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* tangan kamu (kipas bawah) */
 .uno-hand-fan {
   position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%);
-  display: flex; align-items: flex-end; z-index: 5; padding-top: 34px;
+  display: flex; align-items: flex-end; z-index: 5; padding-top: 60px;
 }
 .uno-hand-fan .uno-card {
-  margin: 0 -12px; transform-origin: bottom center;
+  margin: 0 -6px; transform-origin: bottom center;
   transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px));
 }
-.uno-hand-fan .uno-card.playable { cursor: pointer; }
-.uno-hand-fan .uno-card.playable:hover {
-  transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) - 24px)) scale(1.06);
-  z-index: 20;
+/* kartu yang BISA dimainkan naik lebih tinggi biar gampang dikenali */
+.uno-hand-fan .uno-card.playable {
+  cursor: pointer;
+  transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) - 24px));
 }
-.uno-hand-fan .uno-card.deal { animation: dealFan 0.42s ease both; }
+/* hover: kartu APA PUN (termasuk yang gak bisa dimainkan) naik paling atas
+   & diluruskan biar pemain tau itu kartu apa */
+.uno-hand-fan .uno-card:hover {
+  transform: translateY(calc(var(--lift, 0px) - 56px)) scale(1.14) rotate(0deg);
+  z-index: 30;
+}
+.uno-hand-fan .uno-card.deal { animation: dealFan 0.42s ease backwards; }
 @keyframes dealFan {
   from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + 48px)); opacity: 0; }
   to   { transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px)); opacity: 1; }
