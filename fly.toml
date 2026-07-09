@@ -1,0 +1,20 @@
+# fly.toml — konfigurasi Fly.io
+# Ganti "app" kalau nama udah kepakai. Region sin = Singapore (deket Indonesia).
+
+app = "eknowledge-game"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # WebSocket butuh koneksi persisten -> jangan auto-stop mesin.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

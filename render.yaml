@@ -1,0 +1,18 @@
+# render.yaml — blueprint Render.com
+# Render bakal baca file ini pas connect repo, jadi setting-nya otomatis (gak usah isi manual).
+#
+# Catatan free tier: service "tidur" setelah 15 menit nganggur, bangun lagi ~30 detik
+# pas ada yang buka. Buat main pas istirahat kantor, ini cukup.
+
+services:
+  - type: web
+    name: eknowledge-game
+    runtime: node
+    plan: free
+    region: singapore        # deket Indonesia
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

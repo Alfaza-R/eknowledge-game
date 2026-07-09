@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eknowledge Game — Tic-Tac-Toe</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-root">
+
+    <!-- SCREEN 1: home (bikin / gabung room) -->
+    <section id="screen-home" class="screen">
+      <h1>Eknowledge Game</h1>
+      <p class="sub">Tic-Tac-Toe bareng tim kantor</p>
+
+      <label>Nama kamu
+        <input id="input-name" type="text" placeholder="Nama kamu" maxlength="20" />
+      </label>
+
+      <button id="btn-create" class="primary">Bikin Room</button>
+
+      <div class="divider">atau</div>
+
+      <div class="join-row">
+        <input id="input-room" type="text" placeholder="Kode room (6 huruf)" maxlength="6" />
+        <button id="btn-join">Gabung</button>
+      </div>
+
+      <p id="home-error" class="error"></p>
+    </section>
+
+    <!-- SCREEN 2: lobby -->
+    <section id="screen-lobby" class="screen hidden">
+      <h2>Room <span id="lobby-code" class="code"></span></h2>
+      <button id="btn-copy" class="ghost">Salin link undangan</button>
+
+      <ul id="player-list"></ul>
+
+      <button id="btn-start" class="primary hidden">Mulai</button>
+      <p id="lobby-hint" class="hint"></p>
+    </section>
+
+    <!-- SCREEN 3: game -->
+    <section id="screen-game" class="screen hidden">
+      <p id="turn-banner" class="turn"></p>
+      <div id="board"></div>
+      <p id="result" class="result hidden"></p>
+      <button id="btn-again" class="primary hidden">Main lagi</button>
+    </section>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
