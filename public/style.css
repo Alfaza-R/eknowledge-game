@@ -36,7 +36,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-#game-root { width: 100%; max-width: 460px; }
+#game-root { width: 100%; max-width: 460px; transition: max-width 0.25s ease; }
+#game-root.wide { max-width: min(1120px, 96vw); }
 
 .screen {
   background: var(--panel);
@@ -48,6 +49,14 @@ body {
   animation: screenIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .hidden { display: none !important; }
+
+/* mode meja Uno: lepas dari panel sempit */
+#screen-game.uno-mode {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
 
 @keyframes screenIn {
   from { opacity: 0; transform: translateY(14px) scale(0.985); }
@@ -136,12 +145,13 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* ---- Umum in-game ---- */
 .turn { font-size: 1.05rem; margin: 0.8rem 0; min-height: 1.4em; font-weight: 600; }
-.turn.my-turn { color: var(--accent); animation: turnGlow 1.6s ease-in-out infinite; }
+.turn.my-turn, .uno-turn.my-turn { color: var(--accent); animation: turnGlow 1.6s ease-in-out infinite; }
 @keyframes turnGlow {
   0%, 100% { text-shadow: 0 0 0 rgba(91, 147, 255, 0); }
   50% { text-shadow: 0 0 14px rgba(91, 147, 255, 0.55); }
 }
-.result { font-size: 1.4rem; font-weight: 800; margin: 1rem 0; animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.result { font-size: 1.4rem; font-weight: 800; margin: 0.4rem 0; animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ---- Tic-tac-toe ---- */
 #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; aspect-ratio: 1/1; }
@@ -158,32 +168,48 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .cell.o { color: var(--ok); }
 .cell.disabled { pointer-events: none; }
 .cell.just-placed { animation: pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
-@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-/* ---- Uno ---- */
-.uno-opponents { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 0.8rem; }
-.uno-opp {
-  background: #12151b; border: 1px solid var(--line); border-radius: 12px;
-  padding: 0.45rem 0.65rem; min-width: 76px; transition: box-shadow 0.2s, border-color 0.2s;
+/* =======================================================================
+   UNO — layout meja
+   ======================================================================= */
+.uno-table {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 74vh;
+  margin: 0 auto;
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse 56% 50% at 50% 46%, #3b4570 0%, #263056 45%, transparent 72%),
+    radial-gradient(ellipse at 50% 50%, #1b2138, #10152a);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.55), var(--shadow);
 }
-.uno-opp.turn { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 16px rgba(91, 147, 255, 0.3); }
-.uno-opp-name { font-size: 0.8rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
-.uno-opp-count { font-size: 0.85rem; color: var(--muted); }
-.uno-badge { color: var(--danger); font-weight: 800; font-size: 0.7rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
-@keyframes unoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
 
-.uno-center { margin: 0.3rem 0 0.6rem; }
-.uno-info { font-size: 0.9rem; color: var(--muted); }
-.uno-info .dir { margin-left: 0.4rem; font-size: 1.15rem; color: var(--fg); display: inline-block; }
-.color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 0.2rem; transition: background 0.3s; }
-.color-dot.red { background: var(--uno-red); }
-.color-dot.yellow { background: var(--uno-yellow); }
-.color-dot.green { background: var(--uno-green); }
-.color-dot.blue { background: var(--uno-blue); }
+/* arah putaran (placeholder — nanti bisa diganti aset PNG panah) */
+.uno-dir {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  font-size: clamp(120px, 24vw, 240px); line-height: 1;
+  color: rgba(255, 255, 255, 0.06); z-index: 0; pointer-events: none;
+  animation: spin 16s linear infinite;
+}
+.uno-dir.ccw { animation-direction: reverse; }
+@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-.uno-pile-row { display: flex; gap: 1rem; justify-content: center; align-items: center; margin: 0.6rem 0; }
-.uno-last { font-size: 0.8rem; color: var(--muted); min-height: 1.1em; margin: 0.2rem 0 0; }
+/* pusat: deck + buangan + warna */
+.uno-play {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
+}
+.uno-piles { display: flex; align-items: center; gap: 0.9rem; }
+.uno-color { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--fg); font-weight: 600; }
+.uno-color span { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.uno-color.red span { background: var(--uno-red); }
+.uno-color.yellow span { background: var(--uno-yellow); }
+.uno-color.green span { background: var(--uno-green); }
+.uno-color.blue span { background: var(--uno-blue); }
 
+/* kartu (muka) */
 .uno-card {
   width: 48px; height: 70px; border-radius: 10px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
@@ -197,41 +223,108 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.green { background: var(--uno-green); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
-.uno-card.deck {
-  flex-direction: column; background: #10131a; color: var(--muted);
-  border-style: dashed; font-size: 0.7rem; letter-spacing: 1px; gap: 2px;
-}
-.uno-card.deck small { font-size: 1rem; font-weight: 700; color: var(--fg); }
-.uno-card.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
-.uno-card.playable:hover { transform: translateY(-8px) scale(1.04); box-shadow: 0 12px 20px rgba(0, 0, 0, 0.5); }
+.uno-card.discard { width: 62px; height: 90px; font-size: 1.8rem; }
+.uno-card.playable { outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
 @keyframes cardGlow {
   0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 0 rgba(74, 222, 128, 0); }
-  50% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 14px rgba(74, 222, 128, 0.5); }
+  50% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 16px rgba(74, 222, 128, 0.55); }
 }
-.uno-card.deck.playable { animation: none; }
-.uno-card.deck.playable:hover { transform: translateY(-4px); }
-
-/* kartu buangan yang baru dimainin */
-.uno-card.played { animation: slam 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.uno-card.played { animation: slam 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
 @keyframes slam {
-  0% { transform: translateY(-46px) rotate(-14deg) scale(1.25); opacity: 0; }
+  0% { transform: translateY(-52px) rotate(-14deg) scale(1.3); opacity: 0; }
   60% { opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
 
-/* kartu dibagi di awal */
-.uno-card.deal { animation: dealIn 0.4s ease both; }
-@keyframes dealIn {
-  from { transform: translateY(34px) scale(0.7); opacity: 0; }
-  to { transform: none; opacity: 1; }
+/* punggung kartu (placeholder — ganti dengan background-image PNG nanti) */
+.uno-back {
+  width: 48px; height: 70px; border-radius: 10px; flex: 0 0 auto; position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background:
+    radial-gradient(ellipse 62% 40% at 50% 50%, #fff 0 38%, transparent 40%),
+    linear-gradient(150deg, #e4483b, #a3201c);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.18);
+  display: flex; align-items: center; justify-content: center;
+}
+.uno-back.deck { width: 54px; height: 78px; cursor: default; }
+.uno-back.deck small {
+  position: relative; z-index: 1; background: rgba(0, 0, 0, 0.6); color: #fff;
+  font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
+}
+.uno-back.deck.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; }
+.uno-back.deck.playable:hover { transform: translateY(-4px); }
+.uno-back.mini { width: 26px; height: 38px; border-width: 1.5px; margin: 0 -13px; }
+
+/* kursi lawan */
+.uno-seat {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  z-index: 3; width: 120px;
+}
+.seat-fan { display: flex; justify-content: center; align-items: center; height: 42px; }
+.seat-info {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(10, 13, 20, 0.72); border: 1px solid var(--line);
+  border-radius: 10px; padding: 4px 8px;
+}
+.uno-avatar {
+  width: 38px; height: 38px; border-radius: 9px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 1rem;
+  background: linear-gradient(135deg, #5b93ff, #7a3ff0);
+  /* ganti PNG nanti: background-image: url('/avatars/....png'); background-size: cover; */
+}
+.seat-meta { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.seat-name { font-size: 0.8rem; font-weight: 700; max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-count { font-size: 0.75rem; color: var(--muted); }
+.uno-seat.turn .seat-info { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(91, 147, 255, 0.4); }
+.uno-seat.turn .uno-avatar { box-shadow: 0 0 0 2px var(--accent); }
+.uno-badge { color: var(--danger); font-weight: 800; font-size: 0.68rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
+@keyframes unoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
+
+/* tangan kamu (kipas bawah) */
+.uno-hand-fan {
+  position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%);
+  display: flex; align-items: flex-end; z-index: 5; padding-top: 34px;
+}
+.uno-hand-fan .uno-card {
+  margin: 0 -12px; transform-origin: bottom center;
+  transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px));
+}
+.uno-hand-fan .uno-card.playable { cursor: pointer; }
+.uno-hand-fan .uno-card.playable:hover {
+  transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) - 24px)) scale(1.06);
+  z-index: 20;
+}
+.uno-hand-fan .uno-card.deal { animation: dealFan 0.42s ease both; }
+@keyframes dealFan {
+  from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + 48px)); opacity: 0; }
+  to   { transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px)); opacity: 1; }
 }
 
-.uno-hand {
-  display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center;
-  margin-top: 0.5rem; max-height: 200px; overflow-y: auto; padding: 4px;
+/* bar bawah */
+.uno-bar {
+  display: flex; align-items: center; justify-content: center; gap: 1rem;
+  margin-top: 0.8rem; flex-wrap: wrap; min-height: 2rem;
 }
+.uno-turn { font-weight: 700; }
+.uno-last { color: var(--muted); font-size: 0.85rem; }
+.pass-btn { width: auto; padding: 0.5rem 1.3rem; margin: 0; }
 
-/* pemilih warna wild */
+/* hasil menang (overlay di atas meja) */
+.uno-result-overlay {
+  position: absolute; inset: 0; z-index: 30; border-radius: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.uno-result-box {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+  padding: 1.4rem 1.8rem; box-shadow: var(--shadow);
+  animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.uno-result-box .primary { width: 100%; }
+
+/* ---- pemilih warna wild ---- */
 .color-overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.62);
   display: flex; align-items: center; justify-content: center; z-index: 50;
@@ -252,14 +345,12 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .color-choice.green { background: var(--uno-green); }
 .color-choice.blue { background: var(--uno-blue); }
 
-/* konfeti pas menang */
+/* ---- konfeti pas menang ---- */
 .confetti-piece {
   position: fixed; top: -12vh; width: 10px; height: 14px; border-radius: 2px;
   z-index: 60; pointer-events: none; animation: confettiFall linear forwards;
 }
-@keyframes confettiFall {
-  to { transform: translateY(120vh) rotate(720deg); opacity: 0.9; }
-}
+@keyframes confettiFall { to { transform: translateY(120vh) rotate(720deg); opacity: 0.9; } }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

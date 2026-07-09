@@ -35,6 +35,10 @@ const screens = {
 };
 function show(name) {
   for (const k in screens) screens[k].classList.toggle("hidden", k !== name);
+  if (name !== "game") {
+    $("game-root").classList.remove("wide");
+    screens.game.classList.remove("uno-mode");
+  }
 }
 function myName() {
   return $("input-name").value.trim() || nameFromUrl || "Guest";
@@ -154,6 +158,8 @@ function renderTicTacToe(view) {
   show("game");
   const g = view.game;
   const root = $("screen-game");
+  root.classList.remove("uno-mode");
+  $("game-root").classList.remove("wide");
   root.innerHTML = `
     <p class="turn" id="ttt-turn"></p>
     <div id="board"></div>
@@ -211,106 +217,166 @@ function unoCardEl(card, { playable = false, onClick = null } = {}) {
   return el;
 }
 
+// huruf awal nama buat avatar placeholder (nanti diganti PNG dari user)
+function initial(name) { return ((name || "?").trim().charAt(0) || "?").toUpperCase(); }
+
+// punggung kartu placeholder (nanti diganti PNG)
+function unoBackEl(extra = "") {
+  const el = document.createElement("div");
+  el.className = "uno-back " + extra;
+  return el;
+}
+
+// posisi kursi lawan: disebar di busur atas meja, kiri → kanan
+function seatPositions(k) {
+  const cx = 50, cy = 44, rx = 46, ry = 42;
+  const out = [];
+  for (let i = 0; i < k; i++) {
+    const t = Math.PI - ((i + 1) * Math.PI) / (k + 1); // 180°..0°
+    out.push({ left: cx + rx * Math.cos(t), top: cy - ry * Math.sin(t) });
+  }
+  return out;
+}
+
 function renderUno(view) {
   show("game");
   const g = view.game;
   const root = $("screen-game");
+  root.classList.add("uno-mode");
+  $("game-root").classList.add("wide");
   root.innerHTML = "";
 
-  const firstDeal = prevStatus !== "playing"; // baru masuk main → animasi bagi kartu
+  const firstDeal = prevStatus !== "playing";
   const topSig = JSON.stringify(g.topCard);
-  const topChanged = topSig !== prevTopSig;   // kartu buangan berubah → animasi "slam"
+  const topChanged = topSig !== prevTopSig;
   prevTopSig = topSig;
 
-  // --- Lawan ---
-  const opp = document.createElement("div");
-  opp.className = "uno-opponents";
-  for (const o of g.opponents) {
-    const box = document.createElement("div");
-    box.className = "uno-opp" + (o.isTurn ? " turn" : "");
-    box.innerHTML = `<div class="uno-opp-name">${escapeHtml(o.name)}</div>
-      <div class="uno-opp-count">🂠 ${o.count}${o.count === 1 ? ' <span class="uno-badge">UNO!</span>' : ""}</div>`;
-    opp.appendChild(box);
-  }
-  root.appendChild(opp);
+  const playing = view.status === "playing";
+  const canDraw = playing && view.isMyTurn && !g.iDrew;
+  const emitMove = (m) => socket.emit("playMove", { roomId: currentRoom, move: m });
 
-  // --- Tengah: warna aktif, buangan, deck ---
-  const center = document.createElement("div");
-  center.className = "uno-center";
-  const colorDot = `<span class="color-dot ${g.currentColor}" title="Warna aktif"></span>`;
-  center.innerHTML = `<div class="uno-info">${colorDot} Warna: <b>${COLOR_ID[g.currentColor] || "-"}</b>
-      <span class="dir">${g.direction === 1 ? "↻" : "↺"}</span></div>`;
+  // ===== MEJA =====
+  const table = document.createElement("div");
+  table.className = "uno-table";
 
-  const pileRow = document.createElement("div");
-  pileRow.className = "uno-pile-row";
-  const topEl = unoCardEl(g.topCard, {}); // kartu teratas buangan
+  // arah putaran (placeholder)
+  const dir = document.createElement("div");
+  dir.className = "uno-dir " + (g.direction === 1 ? "cw" : "ccw");
+  dir.textContent = g.direction === 1 ? "↻" : "↺";
+  table.appendChild(dir);
+
+  // pusat: deck + buangan + warna aktif
+  const play = document.createElement("div");
+  play.className = "uno-play";
+  const piles = document.createElement("div");
+  piles.className = "uno-piles";
+
+  const deck = unoBackEl("deck" + (canDraw ? " playable" : ""));
+  deck.innerHTML = `<small>${g.drawPileCount}</small>`;
+  if (canDraw) deck.onclick = () => emitMove({ type: "draw" });
+  piles.appendChild(deck);
+
+  const topEl = unoCardEl(g.topCard, {});
+  topEl.classList.add("discard");
   if (topChanged) topEl.classList.add("played");
-  pileRow.appendChild(topEl);
+  piles.appendChild(topEl);
+  play.appendChild(piles);
 
-  const deck = document.createElement("div");
-  deck.className = "uno-card deck" + (view.status === "playing" && view.isMyTurn && !g.iDrew ? " playable" : "");
-  deck.innerHTML = `<span>DECK</span><small>${g.drawPileCount}</small>`;
-  if (view.status === "playing" && view.isMyTurn && !g.iDrew) {
-    deck.onclick = () => socket.emit("playMove", { roomId: currentRoom, move: { type: "draw" } });
-  }
-  pileRow.appendChild(deck);
-  center.appendChild(pileRow);
+  const color = document.createElement("div");
+  color.className = "uno-color " + g.currentColor;
+  color.innerHTML = `<span></span>${COLOR_ID[g.currentColor] || ""}`;
+  play.appendChild(color);
+  table.appendChild(play);
 
-  if (g.lastAction) {
-    const la = document.createElement("p");
-    la.className = "uno-last";
-    la.textContent = g.lastAction;
-    center.appendChild(la);
-  }
-  root.appendChild(center);
+  // ===== LAWAN mengelilingi meja =====
+  const pos = seatPositions(g.opponents.length);
+  g.opponents.forEach((o, idx) => {
+    const seat = document.createElement("div");
+    seat.className = "uno-seat" + (o.isTurn ? " turn" : "");
+    seat.style.left = pos[idx].left + "%";
+    seat.style.top = pos[idx].top + "%";
 
-  // --- Banner giliran ---
-  const turn = document.createElement("p");
-  turn.className = "turn" + (view.status === "playing" && view.isMyTurn ? " my-turn" : "");
-  if (view.status === "playing") {
-    turn.textContent = view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`;
-  }
-  root.appendChild(turn);
+    const fan = document.createElement("div");
+    fan.className = "seat-fan";
+    const shown = Math.min(o.count, 7);
+    for (let i = 0; i < shown; i++) {
+      const b = unoBackEl("mini");
+      b.style.transform = `rotate(${(i - (shown - 1) / 2) * 7}deg)`;
+      fan.appendChild(b);
+    }
+    seat.appendChild(fan);
 
-  // --- Tangan sendiri ---
+    const info = document.createElement("div");
+    info.className = "seat-info";
+    info.innerHTML = `<div class="uno-avatar">${initial(o.name)}</div>
+      <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>
+      <span class="seat-count">🂠 ${o.count}${o.count === 1 ? ' <span class="uno-badge">UNO!</span>' : ""}</span></div>`;
+    seat.appendChild(info);
+    table.appendChild(seat);
+  });
+
+  // ===== TANGAN KAMU (kipas bawah) =====
   const hand = document.createElement("div");
-  hand.className = "uno-hand";
+  hand.className = "uno-hand-fan";
+  const n = g.myHand.length;
+  const spread = Math.min(8, 78 / Math.max(n, 1));
   g.myHand.forEach((card, i) => {
-    const canPlay = view.status === "playing" && view.isMyTurn && card.playable;
-    const el = unoCardEl(card, {
-      playable: canPlay,
-      onClick: canPlay ? () => playUnoCard(card, i) : null,
-    });
-    if (firstDeal) { el.classList.add("deal"); el.style.animationDelay = i * 55 + "ms"; }
+    const canPlay = playing && view.isMyTurn && card.playable;
+    const el = unoCardEl(card, { playable: canPlay, onClick: canPlay ? () => playUnoCard(card, i) : null });
+    const ang = (i - (n - 1) / 2) * spread;
+    el.style.setProperty("--ang", ang + "deg");
+    el.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
+    if (firstDeal) { el.classList.add("deal"); el.style.animationDelay = i * 45 + "ms"; }
     hand.appendChild(el);
   });
-  root.appendChild(hand);
+  table.appendChild(hand);
 
-  // --- Kontrol: pass ---
-  if (view.status === "playing" && view.isMyTurn && g.iDrew) {
-    const pass = document.createElement("button");
-    pass.className = "primary";
-    pass.textContent = "Lewati (pass)";
-    pass.onclick = () => socket.emit("playMove", { roomId: currentRoom, move: { type: "pass" } });
-    root.appendChild(pass);
-  }
-
-  // --- Hasil ---
+  // ===== Hasil (overlay di atas meja) =====
   if (view.status === "finished") {
+    const over = document.createElement("div");
+    over.className = "uno-result-overlay";
+    const box = document.createElement("div");
+    box.className = "uno-result-box";
     const r = document.createElement("p");
     r.className = "result";
-    r.textContent = view.resultText;
     r.style.color = view.youWon ? "var(--ok)" : "var(--fg)";
-    root.appendChild(r);
+    r.textContent = view.resultText;
+    box.appendChild(r);
     if (view.youAreHost) {
       const again = document.createElement("button");
       again.className = "primary";
       again.textContent = "Main lagi";
       again.onclick = () => socket.emit("playAgain", { roomId: currentRoom });
-      root.appendChild(again);
+      box.appendChild(again);
     }
+    over.appendChild(box);
+    table.appendChild(over);
     if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
+
+  root.appendChild(table);
+
+  // ===== BAR bawah: giliran, aksi terakhir, pass =====
+  const bar = document.createElement("div");
+  bar.className = "uno-bar";
+  const tSpan = document.createElement("span");
+  tSpan.className = "uno-turn" + (playing && view.isMyTurn ? " my-turn" : "");
+  tSpan.textContent = playing ? (view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`) : "";
+  bar.appendChild(tSpan);
+  if (g.lastAction) {
+    const la = document.createElement("span");
+    la.className = "uno-last";
+    la.textContent = g.lastAction;
+    bar.appendChild(la);
+  }
+  if (playing && view.isMyTurn && g.iDrew) {
+    const pass = document.createElement("button");
+    pass.className = "primary pass-btn";
+    pass.textContent = "Lewati";
+    pass.onclick = () => emitMove({ type: "pass" });
+    bar.appendChild(pass);
+  }
+  root.appendChild(bar);
 }
 
 // Klik kartu Uno: kalau wild → pilih warna dulu, selain itu langsung main.
