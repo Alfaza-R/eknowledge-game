@@ -19,6 +19,12 @@ const gameFromUrl = params.get("game");
 let chosenGame = gameFromUrl && GAMES[gameFromUrl] ? gameFromUrl : "tictactoe";
 let currentRoom = null;
 
+// Buat animasi: bandingin state antar render biar cuma yang berubah yang di-animate.
+let prevStatus = null;
+let prevTopSig = null;
+let prevBoard = null;
+let celebrated = false;
+
 const $ = (id) => document.getElementById(id);
 const screens = {
   select: $("screen-select"),
@@ -132,9 +138,13 @@ function renderLobby(view) {
 // ===========================================================================
 socket.on("state", (view) => {
   currentRoom = view.roomId;
-  if (view.status === "lobby") renderLobby(view);
-  else if (view.gameType === "uno") renderUno(view);
+  if (view.status === "lobby") {
+    // reset penanda animasi tiap balik ke lobby (game baru)
+    prevBoard = null; prevTopSig = null; celebrated = false;
+    renderLobby(view);
+  } else if (view.gameType === "uno") renderUno(view);
   else renderTicTacToe(view);
+  prevStatus = view.status;
 });
 
 // ---------------------------------------------------------------------------
@@ -156,16 +166,21 @@ function renderTicTacToe(view) {
       : `Giliran ${view.currentTurnName}…`;
   }
 
+  // kotak mana yang baru keisi (buat animasi pop cuma di situ)
+  const changed = prevBoard ? g.board.findIndex((m, i) => m && m !== prevBoard[i]) : -1;
+
   const board = $("board");
   g.board.forEach((mark, i) => {
     const cell = document.createElement("div");
     cell.className = "cell" + (mark ? " filled " + mark.toLowerCase() : "");
+    if (i === changed) cell.classList.add("just-placed");
     if (mark) cell.textContent = mark;
     const clickable = view.status === "playing" && view.isMyTurn && !mark;
     if (!clickable) cell.classList.add("disabled");
     cell.onclick = () => clickable && socket.emit("playMove", { roomId: currentRoom, move: { cell: i } });
     board.appendChild(cell);
   });
+  prevBoard = g.board.slice();
 
   if (view.status === "finished") {
     const r = $("ttt-result");
@@ -177,6 +192,7 @@ function renderTicTacToe(view) {
       again.classList.remove("hidden");
       again.onclick = () => socket.emit("playAgain", { roomId: currentRoom });
     }
+    if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
 }
 
@@ -201,6 +217,11 @@ function renderUno(view) {
   const root = $("screen-game");
   root.innerHTML = "";
 
+  const firstDeal = prevStatus !== "playing"; // baru masuk main → animasi bagi kartu
+  const topSig = JSON.stringify(g.topCard);
+  const topChanged = topSig !== prevTopSig;   // kartu buangan berubah → animasi "slam"
+  prevTopSig = topSig;
+
   // --- Lawan ---
   const opp = document.createElement("div");
   opp.className = "uno-opponents";
@@ -222,7 +243,9 @@ function renderUno(view) {
 
   const pileRow = document.createElement("div");
   pileRow.className = "uno-pile-row";
-  pileRow.appendChild(unoCardEl(g.topCard, {})); // kartu teratas buangan
+  const topEl = unoCardEl(g.topCard, {}); // kartu teratas buangan
+  if (topChanged) topEl.classList.add("played");
+  pileRow.appendChild(topEl);
 
   const deck = document.createElement("div");
   deck.className = "uno-card deck" + (view.status === "playing" && view.isMyTurn && !g.iDrew ? " playable" : "");
@@ -243,7 +266,7 @@ function renderUno(view) {
 
   // --- Banner giliran ---
   const turn = document.createElement("p");
-  turn.className = "turn";
+  turn.className = "turn" + (view.status === "playing" && view.isMyTurn ? " my-turn" : "");
   if (view.status === "playing") {
     turn.textContent = view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`;
   }
@@ -258,6 +281,7 @@ function renderUno(view) {
       playable: canPlay,
       onClick: canPlay ? () => playUnoCard(card, i) : null,
     });
+    if (firstDeal) { el.classList.add("deal"); el.style.animationDelay = i * 55 + "ms"; }
     hand.appendChild(el);
   });
   root.appendChild(hand);
@@ -285,6 +309,7 @@ function renderUno(view) {
       again.onclick = () => socket.emit("playAgain", { roomId: currentRoom });
       root.appendChild(again);
     }
+    if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
 }
 
@@ -341,6 +366,21 @@ function init() {
   if (roomFromUrl) show("loading");          // nunggu auto-join
   else if (gameFromUrl && GAMES[gameFromUrl]) openHome(gameFromUrl); // deep-link 1 game
   else show("select");                        // buka game.taharica.com langsung
+}
+
+function confettiBurst() {
+  const colors = ["#e4483b", "#f2b400", "#3fae4a", "#3b7de4", "#5b93ff", "#ffffff"];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement("div");
+    p.className = "confetti-piece";
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.background = colors[i % colors.length];
+    p.style.animationDelay = Math.random() * 0.35 + "s";
+    p.style.animationDuration = 1.8 + Math.random() * 1.4 + "s";
+    p.style.opacity = 0.9;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3400);
+  }
 }
 
 function escapeHtml(s) {
