@@ -296,12 +296,19 @@ function renderUno(view) {
     seat.style.left = pos[idx].left + "%";
     seat.style.top = pos[idx].top + "%";
 
+    // kipas punggung = jumlah kartu asli lawan (lebar kipas dijaga biar nggak melebar)
     const fan = document.createElement("div");
     fan.className = "seat-fan";
-    const shown = Math.min(o.count, 7);
-    for (let i = 0; i < shown; i++) {
+    const count = Math.min(o.count, 25); // batas aman DOM
+    const cardW = 26, areaW = 96;
+    const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
+    const arc = Math.min(58, count * 6); // total derajat kipas
+    for (let i = 0; i < count; i++) {
       const b = unoBackEl("mini");
-      b.style.transform = `rotate(${(i - (shown - 1) / 2) * 7}deg)`;
+      const ang = count > 1 ? (i - (count - 1) / 2) * (arc / (count - 1)) : 0;
+      if (i > 0) b.style.marginLeft = step - cardW + "px";
+      b.style.transform = `rotate(${ang}deg) translateY(${Math.abs(ang) * 0.3}px)`;
+      b.style.zIndex = i;
       fan.appendChild(b);
     }
     seat.appendChild(fan);
