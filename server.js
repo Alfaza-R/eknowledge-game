@@ -14,7 +14,7 @@ const roomStore = require("./src/rooms");
 const games = {
   tictactoe: require("./src/games/tictactoe"),
   uno: require("./src/games/uno"),
-  // ludo: require("./src/games/ludo"),
+  ludo: require("./src/games/ludo"),
 };
 
 const app = express();

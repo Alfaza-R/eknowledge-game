@@ -352,6 +352,68 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 }
 .uno-result-box .primary { width: 100%; }
 
+/* =======================================================================
+   LUDO
+   ======================================================================= */
+.ludo-wrap { display: flex; gap: 1rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.ludo-board {
+  display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr);
+  width: min(90vw, 540px); aspect-ratio: 1; position: relative;
+  background: #0b0e14; border: 2px solid var(--line); border-radius: 12px; overflow: hidden;
+}
+.lc { position: relative; }
+.lc.ring { background: #e9edf5; box-shadow: inset 0 0 0 0.5px #c3cad8; }
+.lc.ring.safe::after {
+  content: "★"; position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 0.6rem; color: #7a869c;
+}
+.lc.center { background: conic-gradient(var(--uno-red) 0 90deg, var(--uno-blue) 0 180deg, var(--uno-yellow) 0 270deg, var(--uno-green) 0); }
+.lc.blank { background: #0b0e14; }
+.lc.corner.red { background: rgba(228, 72, 59, 0.18); }
+.lc.corner.green { background: rgba(63, 174, 74, 0.18); }
+.lc.corner.yellow { background: rgba(242, 180, 0, 0.18); }
+.lc.corner.blue { background: rgba(59, 125, 228, 0.18); }
+.lc.lane.red, .lc.start.red { background: var(--uno-red); }
+.lc.lane.green, .lc.start.green { background: var(--uno-green); }
+.lc.lane.yellow, .lc.start.yellow { background: var(--uno-yellow); }
+.lc.lane.blue, .lc.start.blue { background: var(--uno-blue); }
+.lc.slot::before {
+  content: ""; position: absolute; inset: 18%; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15);
+}
+.ludo-token {
+  position: absolute; inset: 14%; border-radius: 50%; z-index: 2;
+  border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+.ludo-token.red { background: var(--uno-red); }
+.ludo-token.green { background: var(--uno-green); }
+.ludo-token.yellow { background: var(--uno-yellow); }
+.ludo-token.blue { background: var(--uno-blue); }
+.ludo-token.movable { cursor: pointer; animation: tokPulse 1s ease-in-out infinite; }
+.ludo-token.movable:hover { transform: scale(1.16); z-index: 5; }
+@keyframes tokPulse {
+  0%, 100% { box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), 0 0 0 rgba(255, 255, 255, 0); }
+  50% { box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), 0 0 10px 2px rgba(255, 255, 255, 0.9); }
+}
+.ludo-panel { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; min-width: 150px; }
+.ludo-dice {
+  width: 64px; height: 64px; border-radius: 14px; background: #12151b; border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; font-size: 2.7rem; line-height: 1; color: #fff;
+}
+.ludo-dice.rolled { animation: pop 0.3s ease; }
+.ludo-players { width: 100%; display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.3rem; }
+.ludo-prow {
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;
+  padding: 0.35rem 0.6rem; border: 1px solid var(--line); border-radius: 8px;
+}
+.ludo-prow.turn { border-color: var(--accent); box-shadow: 0 0 10px rgba(91, 147, 255, 0.3); }
+.ludo-prow b { margin-left: auto; }
+.dotc { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dotc.red { background: var(--uno-red); }
+.dotc.green { background: var(--uno-green); }
+.dotc.yellow { background: var(--uno-yellow); }
+.dotc.blue { background: var(--uno-blue); }
+
 /* ---- pemilih warna wild ---- */
 .color-overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.62);

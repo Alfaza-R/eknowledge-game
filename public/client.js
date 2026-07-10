@@ -7,7 +7,7 @@ const socket = io();
 const GAMES = {
   tictactoe: { name: "Tic-Tac-Toe", desc: "2 pemain, klasik", emoji: "❌⭕", ready: true },
   uno: { name: "Uno", desc: "2–8 pemain, kartu", emoji: "🎴", ready: true },
-  ludo: { name: "Ludo", desc: "segera hadir", emoji: "🎲", ready: false },
+  ludo: { name: "Ludo", desc: "2–4 pemain, dadu", emoji: "🎲", ready: true },
 };
 
 // Ambil ?room=, ?name=, ?game= dari URL (diisi WordPress lewat iframe).
@@ -152,6 +152,7 @@ socket.on("state", (view) => {
     prevBoard = null; prevTopSig = null; celebrated = false;
     renderLobby(view);
   } else if (view.gameType === "uno") renderUno(view);
+  else if (view.gameType === "ludo") renderLudo(view);
   else renderTicTacToe(view);
   prevStatus = view.status;
 });
@@ -205,6 +206,163 @@ function renderTicTacToe(view) {
     }
     if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
+}
+
+// ---------------------------------------------------------------------------
+// RENDER: LUDO
+// ---------------------------------------------------------------------------
+const LUDO_RING = [
+  [6,1],[6,2],[6,3],[6,4],[6,5],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6],[0,7],
+  [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
+  [7,14],[8,14],[8,13],[8,12],[8,11],[8,10],[8,9],[9,8],[10,8],[11,8],[12,8],[13,8],
+  [14,8],[14,7],[14,6],[13,6],[12,6],[11,6],[10,6],[9,6],[8,5],[8,4],[8,3],[8,2],
+  [8,1],[8,0],[7,0],[6,0],
+];
+const LUDO_COLORS = ["red", "green", "yellow", "blue"];
+const LUDO_START = [0, 13, 26, 39];
+const LUDO_SAFE = new Set([0, 13, 26, 39, 8, 21, 34, 47]);
+const LUDO_HOME = {
+  0: [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]], 1: [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],
+  2: [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]], 3: [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]],
+};
+const LUDO_CORNER = { 0: [0,5,0,5], 1: [0,5,9,14], 2: [9,14,9,14], 3: [9,14,0,5] };
+const LUDO_BASE_SLOTS = {
+  0: [[1,1],[1,4],[4,1],[4,4]], 1: [[1,10],[1,13],[4,10],[4,13]],
+  2: [[10,10],[10,13],[13,10],[13,13]], 3: [[10,1],[10,4],[13,1],[13,4]],
+};
+const DICE_FACE = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+function ludoCellClass(r, c) {
+  for (const seat of [0, 1, 2, 3])
+    if (LUDO_HOME[seat].some(([hr, hc]) => hr === r && hc === c)) return "lane " + LUDO_COLORS[seat];
+  if (r >= 6 && r <= 8 && c >= 6 && c <= 8) return "center";
+  const ringIdx = LUDO_RING.findIndex(([rr, rc]) => rr === r && rc === c);
+  if (ringIdx >= 0) {
+    let cls = "ring";
+    const startSeat = LUDO_START.indexOf(ringIdx);
+    if (startSeat >= 0) cls += " start " + LUDO_COLORS[startSeat];
+    if (LUDO_SAFE.has(ringIdx)) cls += " safe";
+    return cls;
+  }
+  for (const seat of [0, 1, 2, 3]) {
+    const [r0, r1, c0, c1] = LUDO_CORNER[seat];
+    if (r >= r0 && r <= r1 && c >= c0 && c <= c1) {
+      const isSlot = LUDO_BASE_SLOTS[seat].some(([sr, sc]) => sr === r && sc === c);
+      return "corner " + LUDO_COLORS[seat] + (isSlot ? " slot" : "");
+    }
+  }
+  return "blank";
+}
+
+function renderLudo(view) {
+  show("game");
+  const g = view.game;
+  const root = $("screen-game");
+  root.classList.add("uno-mode");
+  $("game-root").classList.add("wide");
+  root.innerHTML = "";
+
+  const playing = view.status === "playing";
+  const myTurn = playing && view.isMyTurn;
+  const emitMove = (m) => socket.emit("playMove", { roomId: currentRoom, move: m });
+
+  const wrap = document.createElement("div");
+  wrap.className = "ludo-wrap";
+
+  // ---- papan 15x15 ----
+  const board = document.createElement("div");
+  board.className = "ludo-board";
+  const cells = {};
+  for (let r = 0; r < 15; r++)
+    for (let c = 0; c < 15; c++) {
+      const cell = document.createElement("div");
+      cell.className = "lc " + ludoCellClass(r, c);
+      cells[r + "_" + c] = cell;
+      board.appendChild(cell);
+    }
+
+  // ---- bidak ----
+  for (const p of g.players) {
+    p.tokens.forEach((t, ti) => {
+      const cell = cells[t.r + "_" + t.c];
+      if (!cell) return;
+      const tok = document.createElement("div");
+      tok.className = "ludo-token " + p.color;
+      const isMine = p.color === g.myColor;
+      if (isMine && myTurn && g.dice !== null && g.movable.includes(ti)) {
+        tok.classList.add("movable");
+        tok.onclick = () => emitMove({ type: "move", tokenIndex: ti });
+      }
+      cell.appendChild(tok);
+    });
+  }
+  wrap.appendChild(board);
+
+  // ---- panel samping ----
+  const panel = document.createElement("div");
+  panel.className = "ludo-panel";
+
+  const dice = document.createElement("div");
+  dice.className = "ludo-dice" + (g.dice ? " rolled" : "");
+  dice.textContent = g.dice ? DICE_FACE[g.dice] : "🎲";
+  panel.appendChild(dice);
+
+  const turn = document.createElement("p");
+  turn.className = "turn" + (myTurn ? " my-turn" : "");
+  turn.textContent = playing ? (view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`) : "";
+  panel.appendChild(turn);
+
+  if (myTurn && g.canRoll) {
+    panel.appendChild(primaryBtn("🎲 Lempar Dadu", () => emitMove({ type: "roll" })));
+  } else if (myTurn && g.dice !== null && g.movable.length) {
+    const h = document.createElement("p");
+    h.className = "hint";
+    h.textContent = "Pilih bidak yang mau digerakin ↑";
+    panel.appendChild(h);
+  }
+
+  if (g.lastAction) {
+    const la = document.createElement("p");
+    la.className = "uno-last";
+    la.textContent = g.lastAction;
+    panel.appendChild(la);
+  }
+
+  const plist = document.createElement("div");
+  plist.className = "ludo-players";
+  for (const p of g.players) {
+    const row = document.createElement("div");
+    row.className = "ludo-prow" + (p.isTurn ? " turn" : "");
+    row.innerHTML = `<span class="dotc ${p.color}"></span>${escapeHtml(p.name)}${p.id === g.currentTurnPlayerId ? "" : ""} <b>${p.done}/4</b>`;
+    plist.appendChild(row);
+  }
+  panel.appendChild(plist);
+  wrap.appendChild(panel);
+
+  // ---- hasil menang ----
+  if (view.status === "finished") {
+    const over = document.createElement("div");
+    over.className = "uno-result-overlay";
+    const box = document.createElement("div");
+    box.className = "uno-result-box";
+    const r = document.createElement("p");
+    r.className = "result";
+    r.style.color = view.youWon ? "var(--ok)" : "var(--fg)";
+    r.textContent = view.resultText;
+    box.appendChild(r);
+    if (view.youAreHost) {
+      const again = document.createElement("button");
+      again.className = "primary";
+      again.textContent = "Main lagi";
+      again.onclick = () => socket.emit("playAgain", { roomId: currentRoom });
+      box.appendChild(again);
+    }
+    over.appendChild(box);
+    board.appendChild(over);
+    if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
+  }
+
+  root.appendChild(wrap);
 }
 
 // ---------------------------------------------------------------------------
