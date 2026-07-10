@@ -25,6 +25,10 @@ let prevTopSig = null;
 let prevBoard = null;
 let celebrated = false;
 
+// Uno: seleksi kartu buat stack. unoSel = index kartu terpilih (urutan tap = bawah→atas).
+let lastUnoView = null;
+let unoSel = [];
+
 const $ = (id) => document.getElementById(id);
 const screens = {
   select: $("screen-select"),
@@ -142,6 +146,7 @@ function renderLobby(view) {
 // ===========================================================================
 socket.on("state", (view) => {
   currentRoom = view.roomId;
+  unoSel = []; // tiap update dari server, reset seleksi (index tangan berubah)
   if (view.status === "lobby") {
     // reset penanda animasi tiap balik ke lobby (game baru)
     prevBoard = null; prevTopSig = null; celebrated = false;
@@ -251,9 +256,12 @@ function renderUno(view) {
   const topChanged = topSig !== prevTopSig;
   prevTopSig = topSig;
 
+  lastUnoView = view; // simpan buat re-render lokal pas milih kartu
   const playing = view.status === "playing";
-  const canDraw = playing && view.isMyTurn && !g.iDrew;
+  const canDraw = playing && view.isMyTurn && !g.iDrew && g.pendingDraw === 0 && unoSel.length === 0;
   const emitMove = (m) => socket.emit("playMove", { roomId: currentRoom, move: m });
+  const inSelection = unoSel.length > 0;
+  const selGroup = inSelection ? g.myHand[unoSel[0]].group : null;
 
   // ===== MEJA =====
   const table = document.createElement("div");
@@ -286,6 +294,12 @@ function renderUno(view) {
   color.className = "uno-color " + g.currentColor;
   color.innerHTML = `<span></span>${COLOR_ID[g.currentColor] || ""}`;
   play.appendChild(color);
+  if (g.pendingDraw > 0) {
+    const pend = document.createElement("div");
+    pend.className = "uno-pending";
+    pend.textContent = `🔥 Tumpukan +${g.pendingDraw}`;
+    play.appendChild(pend);
+  }
   table.appendChild(play);
 
   // ===== LAWAN mengelilingi meja =====
@@ -327,9 +341,28 @@ function renderUno(view) {
   hand.className = "uno-hand-fan";
   const n = g.myHand.length;
   const spread = Math.min(8, 78 / Math.max(n, 1));
+  const myTurn = playing && view.isMyTurn;
   g.myHand.forEach((card, i) => {
-    const canPlay = playing && view.isMyTurn && card.playable;
-    const el = unoCardEl(card, { playable: canPlay, onClick: canPlay ? () => playUnoCard(card, i) : null });
+    const selPos = unoSel.indexOf(i);
+    const selected = selPos >= 0;
+    // kartu ini bisa dipilih?
+    let selectable = false;
+    if (myTurn) {
+      if (g.pendingDraw > 0) selectable = card.playable;      // cuma plus
+      else if (!inSelection) selectable = card.playable;       // belum milih
+      else selectable = card.group === selGroup;               // lagi milih: se-grup aja
+    }
+    const el = unoCardEl(card, { playable: myTurn && card.playable });
+    if (selected) {
+      el.classList.add("selected");
+      const badge = document.createElement("span");
+      badge.className = "sel-order";
+      badge.textContent = selPos + 1;
+      el.appendChild(badge);
+    } else if (inSelection && !selectable) {
+      el.classList.add("dimmed");
+    }
+    if (selectable || selected) el.onclick = () => tapCard(i);
     const ang = (i - (n - 1) / 2) * spread;
     el.style.setProperty("--ang", ang + "deg");
     el.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
@@ -363,11 +396,11 @@ function renderUno(view) {
 
   root.appendChild(table);
 
-  // ===== BAR bawah: giliran, aksi terakhir, pass =====
+  // ===== BAR bawah: giliran + aksi terakhir =====
   const bar = document.createElement("div");
   bar.className = "uno-bar";
   const tSpan = document.createElement("span");
-  tSpan.className = "uno-turn" + (playing && view.isMyTurn ? " my-turn" : "");
+  tSpan.className = "uno-turn" + (myTurn ? " my-turn" : "");
   tSpan.textContent = playing ? (view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`) : "";
   bar.appendChild(tSpan);
   if (g.lastAction) {
@@ -376,25 +409,103 @@ function renderUno(view) {
     la.textContent = g.lastAction;
     bar.appendChild(la);
   }
-  if (playing && view.isMyTurn && g.iDrew) {
-    const pass = document.createElement("button");
-    pass.className = "primary pass-btn";
-    pass.textContent = "Lewati";
-    pass.onclick = () => emitMove({ type: "pass" });
-    bar.appendChild(pass);
-  }
   root.appendChild(bar);
+
+  // ===== KONTROL: mainkan / batal / tarik / lewati =====
+  const controls = document.createElement("div");
+  controls.className = "uno-controls";
+  if (myTurn) {
+    if (g.pendingDraw > 0) {
+      if (unoSel.length > 0) {
+        const add = unoSel.reduce((s, i) => s + (g.myHand[i].kind === "wild4" ? 4 : 2), 0);
+        controls.appendChild(primaryBtn(`Lawan +${add} (total +${g.pendingDraw + add})`, playSelection));
+        controls.appendChild(ghostBtn("Batal", cancelSelection));
+      } else {
+        controls.appendChild(primaryBtn(`😵 Tarik ${g.pendingDraw} kartu`, () => emitMove({ type: "takeDraw" })));
+      }
+    } else if (unoSel.length > 0) {
+      controls.appendChild(primaryBtn(`Mainkan (${unoSel.length})`, playSelection));
+      controls.appendChild(ghostBtn("Batal", cancelSelection));
+    } else if (g.iDrew) {
+      controls.appendChild(primaryBtn("Lewati", () => emitMove({ type: "pass" })));
+    }
+  }
+  if (controls.children.length) root.appendChild(controls);
 }
 
-// Klik kartu Uno: kalau wild → pilih warna dulu, selain itu langsung main.
-function playUnoCard(card, index) {
-  if (card.kind === "wild" || card.kind === "wild4") {
-    showColorPicker((color) =>
-      socket.emit("playMove", { roomId: currentRoom, move: { type: "play", cardIndex: index, chosenColor: color } })
-    );
-  } else {
-    socket.emit("playMove", { roomId: currentRoom, move: { type: "play", cardIndex: index } });
+function primaryBtn(text, onClick) {
+  const b = document.createElement("button");
+  b.className = "primary pass-btn";
+  b.textContent = text;
+  b.onclick = onClick;
+  return b;
+}
+function ghostBtn(text, onClick) {
+  const b = document.createElement("button");
+  b.className = "ghost pass-btn";
+  b.textContent = text;
+  b.onclick = onClick;
+  return b;
+}
+
+// ---- Interaksi pilih kartu (stack) ----
+function tapCard(i) {
+  const g = lastUnoView.game;
+  const card = g.myHand[i];
+  const selPos = unoSel.indexOf(i);
+
+  if (selPos >= 0) {
+    // batal pilih kartu ini + semua yang di ATAS-nya (biar urutan tetap valid)
+    unoSel = unoSel.slice(0, selPos);
+    return renderUno(lastUnoView);
   }
+
+  if (g.pendingDraw > 0) {
+    if (!card.playable) return; // cuma plus
+    unoSel.push(i);
+    return renderUno(lastUnoView);
+  }
+
+  if (unoSel.length === 0) {
+    // instan kalau kartu ini se-grup sendirian & sah jadi paling bawah
+    const sameGroup = g.myHand.filter((c) => c.group === card.group).length;
+    if (card.matchesTop && sameGroup === 1) return playCards([i], card);
+    if (card.matchesTop) unoSel = [i];
+    else {
+      // kartu ini gak nyocok → auto-taruh se-grup yang nyocok jadi paling bawah
+      const bottom = g.myHand.findIndex((c, j) => c.group === card.group && c.matchesTop);
+      if (bottom === -1) return;
+      unoSel = bottom === i ? [i] : [bottom, i];
+    }
+    return renderUno(lastUnoView);
+  }
+
+  // lanjut milih: harus se-grup sama kartu paling bawah
+  if (card.group !== g.myHand[unoSel[0]].group) return;
+  unoSel.push(i);
+  renderUno(lastUnoView);
+}
+
+function playCards(indexes, topCard) {
+  const send = (chosenColor) => {
+    const move = { type: "play", cardIndexes: indexes };
+    if (chosenColor) move.chosenColor = chosenColor;
+    socket.emit("playMove", { roomId: currentRoom, move });
+    unoSel = [];
+  };
+  if (topCard.kind === "wild" || topCard.kind === "wild4") showColorPicker(send);
+  else send();
+}
+
+function playSelection() {
+  if (!unoSel.length) return;
+  const top = lastUnoView.game.myHand[unoSel[unoSel.length - 1]];
+  playCards(unoSel.slice(), top);
+}
+
+function cancelSelection() {
+  unoSel = [];
+  renderUno(lastUnoView);
 }
 
 function showColorPicker(onPick) {

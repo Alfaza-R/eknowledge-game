@@ -1,31 +1,32 @@
-// src/games/uno.js — Uno lengkap
+// src/games/uno.js — Uno "aturan tongkrongan" (bukan Uno internasional penuh)
 //
-// Uno BUTUH server beneran karena ada info tersembunyi (kartu di tangan).
-// getPlayerView WAJIB kirim view beda per pemain: tangan sendiri penuh, lawan cuma JUMLAH.
+// Info tersembunyi (kartu di tangan) → getPlayerView WAJIB beda per pemain.
 //
-// House rules (versi simpel, bisa diubah nanti):
-//  - Deck standar 108 kartu, bagi 7/pemain.
-//  - Main: samain warna / angka / simbol. Wild & Wild+4 boleh kapan aja.
-//  - +2 / +4 TIDAK bisa di-stack (kena langsung tarik + skip).
-//  - Draw: ambil 1 kartu; kalau bisa dimainin boleh langsung main, kalau nggak ya pass.
-//  - "UNO" diumumin otomatis pas pemain sisa 1 kartu (tanpa penalti telat — v1).
-//  - Deck habis → discard (kecuali kartu teratas) diacak jadi deck baru.
-//  - Menang: pemain pertama yang kartunya habis.
-//
-// Bentuk kartu:
-//   { kind: "num", color, value }              angka 0..9
-//   { kind: "skip"|"reverse"|"draw2", color }  kartu aksi berwarna
-//   { kind: "wild"|"wild4" }                    (color null; diisi pas dimainkan)
+// ATURAN RUMAH:
+//  1. STACK se-angka/se-simbol: dalam 1 giliran boleh keluarin beberapa kartu yang
+//     ikon-nya sama (mis. semua "6", atau 2 skip). Kartu PALING BAWAH harus sah nimpa
+//     kartu aktif (nyocok WARNA atau ANGKA/SIMBOL). Sisanya se-ikon; urutan bebas;
+//     kartu PALING ATAS jadi warna aktif baru.
+//  2. Efek kartu aksi NUMPUK: 2 skip = skip 2 orang; 2 reverse = arah balik 2x.
+//  3. Kartu PLUS (+2 & +4) satu "keluarga": boleh dicampur & di-stack. Korban (pemain
+//     berikut) boleh NANGKIS dengan plus sendiri → total tarik numpuk & dilempar terus,
+//     sampai ada yang gak punya/gak mau plus → dia tarik SEMUA total, lalu ke-skip.
+//  4. Wild & +4 bisa di-stack.
+//  5. Nyocok kartu bawah: WARNA atau ANGKA/SIMBOL.
+//  6. Recycle: kalau tumpukan cangkulan < 30, buangan lama (kecuali teratas) diacak
+//     balik jadi deck.
+//  7. UNO diumumin otomatis; menang = kartu habis.
 
 const COLORS = ["red", "yellow", "green", "blue"];
+const RECYCLE_AT = 30;
 
 function buildDeck() {
   const deck = [];
   for (const color of COLORS) {
-    deck.push({ kind: "num", color, value: 0 }); // satu "0" per warna
+    deck.push({ kind: "num", color, value: 0 });
     for (let v = 1; v <= 9; v++) {
       deck.push({ kind: "num", color, value: v });
-      deck.push({ kind: "num", color, value: v }); // dua tiap 1..9
+      deck.push({ kind: "num", color, value: v });
     }
     for (const kind of ["skip", "reverse", "draw2"]) {
       deck.push({ kind, color });
@@ -36,7 +37,7 @@ function buildDeck() {
     deck.push({ kind: "wild" });
     deck.push({ kind: "wild4" });
   }
-  return deck; // 108 kartu
+  return deck; // 108
 }
 
 function shuffle(arr) {
@@ -48,21 +49,35 @@ function shuffle(arr) {
   return a;
 }
 
-// Boleh nggak `card` dimainin di atas `top` dengan warna aktif `currentColor`?
+function isPlus(card) { return card.kind === "draw2" || card.kind === "wild4"; }
+
+// "ikon" kartu — buat nentuin kartu mana yang boleh di-stack bareng.
+//  angka  → "num:<value>"
+//  +2/+4  → "plus"          (satu keluarga)
+//  wild   → "wild"
+//  skip/reverse → "act:<kind>"
+function cardGroup(card) {
+  if (card.kind === "num") return "num:" + card.value;
+  if (isPlus(card)) return "plus";
+  if (card.kind === "wild") return "wild";
+  return "act:" + card.kind;
+}
+
+// Boleh nggak `card` jadi kartu PALING BAWAH di atas `top` (warna aktif `currentColor`)?
 function matches(card, top, currentColor) {
-  if (card.kind === "wild" || card.kind === "wild4") return true; // boleh kapan aja
-  if (card.color === currentColor) return true;                    // sewarna
-  if (card.kind === "num" && top.kind === "num" && card.value === top.value) return true; // seangka
-  if (card.kind !== "num" && card.kind === top.kind) return true;  // simbol sama (skip/reverse/draw2)
+  if (card.kind === "wild" || card.kind === "wild4") return true;
+  if (card.color === currentColor) return true;
+  if (card.kind === "num" && top.kind === "num" && card.value === top.value) return true;
+  if (card.kind !== "num" && card.kind === top.kind) return true;
   return false;
 }
 
-// Ambil n kartu dari deck; kalau deck habis, acak ulang discard (kecuali teratas).
+// Ambil n kartu; kalau deck habis di tengah jalan, acak ulang buangan (kecuali teratas).
 function drawCards(state, n) {
   const out = [];
   for (let i = 0; i < n; i++) {
     if (state.drawPile.length === 0) {
-      if (state.discardPile.length <= 1) break; // beneran habis
+      if (state.discardPile.length <= 1) break;
       const top = state.discardPile.pop();
       state.drawPile = shuffle(state.discardPile);
       state.discardPile = [top];
@@ -72,26 +87,29 @@ function drawCards(state, n) {
   return out;
 }
 
-// Geser giliran sebanyak `steps` langkah ke arah `direction`.
+// Aturan #6: kalau cangkulan < 30, buangan lama masuk balik ke deck.
+function maybeRecycle(state) {
+  if (state.drawPile.length < RECYCLE_AT && state.discardPile.length > 1) {
+    const top = state.discardPile.pop();
+    state.drawPile = shuffle(state.drawPile.concat(state.discardPile));
+    state.discardPile = [top];
+  }
+}
+
 function advance(state, steps) {
   const n = state.order.length;
   state.currentTurn = (((state.currentTurn + state.direction * steps) % n) + n) % n;
   state.drawnThisTurn = false;
 }
 
-function nextIndex(state) {
-  const n = state.order.length;
-  return (((state.currentTurn + state.direction) % n) + n) % n;
-}
-
 function describe(card) {
   const c = { red: "merah", yellow: "kuning", green: "hijau", blue: "biru" }[card.color] || "";
-  if (card.kind === "num") return `${c} ${card.value}`;
-  if (card.kind === "skip") return `skip ${c}`;
-  if (card.kind === "reverse") return `reverse ${c}`;
-  if (card.kind === "draw2") return `+2 ${c}`;
-  if (card.kind === "wild") return `wild (${c})`;
-  if (card.kind === "wild4") return `+4 (${c})`;
+  if (card.kind === "num") return `${c} ${card.value}`.trim();
+  if (card.kind === "skip") return `skip ${c}`.trim();
+  if (card.kind === "reverse") return `reverse ${c}`.trim();
+  if (card.kind === "draw2") return `+2 ${c}`.trim();
+  if (card.kind === "wild") return `wild ${c}`.trim();
+  if (card.kind === "wild4") return `+4 ${c}`.trim();
   return "kartu";
 }
 
@@ -109,20 +127,17 @@ module.exports = {
       names[p.id] = p.name;
       hands[p.id] = deck.splice(0, 7);
     }
-    // Kartu pembuka: ambil kartu ANGKA pertama biar nggak ribet efek di awal.
     const startIdx = deck.findIndex((c) => c.kind === "num");
     const start = deck.splice(startIdx, 1)[0];
-
     return {
-      order,
-      names,
-      hands,
+      order, names, hands,
       drawPile: deck,
       discardPile: [start],
       currentColor: start.color,
       currentTurn: 0,
       direction: 1,
       drawnThisTurn: false,
+      pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
       winner: null,
       lastAction: `Kartu pembuka: ${describe(start)}`,
     };
@@ -132,31 +147,65 @@ module.exports = {
     if (state.winner) return false;
     if (state.order[state.currentTurn] !== playerId) return false;
     if (!move || !move.type) return false;
+    const hand = state.hands[playerId];
+    const top = state.discardPile[state.discardPile.length - 1];
 
-    if (move.type === "draw") return !state.drawnThisTurn; // cuma sekali per giliran
-    if (move.type === "pass") return state.drawnThisTurn;  // harus draw dulu
-
-    if (move.type === "play") {
-      const card = state.hands[playerId][move.cardIndex];
-      if (!card) return false;
-      const top = state.discardPile[state.discardPile.length - 1];
-      if (card.kind === "wild" || card.kind === "wild4") {
-        return COLORS.includes(move.chosenColor); // wajib pilih warna sah
-      }
-      return matches(card, top, state.currentColor);
+    // ---- lagi ada tumpukan plus (harus nangkis pakai plus, atau tarik) ----
+    if (state.pendingDraw > 0) {
+      if (move.type === "takeDraw") return true;
+      if (move.type !== "play") return false;
+      const idxs = move.cardIndexes;
+      if (!Array.isArray(idxs) || idxs.length === 0) return false;
+      if (new Set(idxs).size !== idxs.length) return false;
+      const cards = idxs.map((i) => hand[i]);
+      if (cards.some((c) => !c)) return false;
+      if (!cards.every(isPlus)) return false; // wajib plus semua
+      const topCard = cards[cards.length - 1];
+      if (topCard.kind === "wild4" && !COLORS.includes(move.chosenColor)) return false;
+      return true;
     }
-    return false;
+
+    // ---- giliran normal ----
+    if (move.type === "draw") return !state.drawnThisTurn;
+    if (move.type === "pass") return state.drawnThisTurn;
+    if (move.type !== "play") return false;
+
+    const idxs = move.cardIndexes;
+    if (!Array.isArray(idxs) || idxs.length === 0) return false;
+    if (new Set(idxs).size !== idxs.length) return false;
+    const cards = idxs.map((i) => hand[i]);
+    if (cards.some((c) => !c)) return false;
+
+    const g0 = cardGroup(cards[0]);
+    if (!cards.every((c) => cardGroup(c) === g0)) return false; // harus se-ikon
+    if (!matches(cards[0], top, state.currentColor)) return false; // bawah harus sah
+
+    const topCard = cards[cards.length - 1];
+    if ((topCard.kind === "wild" || topCard.kind === "wild4") && !COLORS.includes(move.chosenColor)) return false;
+    return true;
   },
 
   applyMove(state, move) {
     const s = structuredClone(state);
     const pid = s.order[s.currentTurn];
 
+    if (move.type === "takeDraw") {
+      const drawn = drawCards(s, s.pendingDraw);
+      s.hands[pid].push(...drawn);
+      s.lastAction = `${s.names[pid]} nyerah — tarik ${s.pendingDraw} kartu`;
+      s.pendingDraw = 0;
+      s.drawnThisTurn = false;
+      maybeRecycle(s);
+      advance(s, 1);
+      return s;
+    }
+
     if (move.type === "draw") {
       const [card] = drawCards(s, 1);
       if (card) s.hands[pid].push(card);
       s.drawnThisTurn = true;
       s.lastAction = `${s.names[pid]} ambil kartu`;
+      maybeRecycle(s);
       return s;
     }
 
@@ -166,12 +215,16 @@ module.exports = {
       return s;
     }
 
-    // move.type === "play"
-    const card = s.hands[pid][move.cardIndex];
-    if (card.kind === "wild" || card.kind === "wild4") card.color = move.chosenColor;
-    s.hands[pid].splice(move.cardIndex, 1);
-    s.discardPile.push(card);
-    s.currentColor = card.color;
+    // ---- play (bisa 1 kartu atau stack) ----
+    const idxs = move.cardIndexes.slice();
+    const cards = idxs.map((i) => s.hands[pid][i]); // referensi objek di tangan (clone)
+    const topCard = cards[cards.length - 1];
+    if (topCard.kind === "wild" || topCard.kind === "wild4") topCard.color = move.chosenColor;
+
+    // buang dari tangan (index besar dulu biar aman)
+    for (const i of idxs.slice().sort((a, b) => b - a)) s.hands[pid].splice(i, 1);
+    for (const c of cards) s.discardPile.push(c); // bawah → atas
+    s.currentColor = topCard.color;
     s.drawnThisTurn = false;
 
     if (s.hands[pid].length === 0) {
@@ -180,38 +233,30 @@ module.exports = {
       return s;
     }
 
-    let desc = `${s.names[pid]} main ${describe(card)}`;
+    const group = cardGroup(cards[0]);
     const n = s.order.length;
+    let desc = cards.length > 1
+      ? `${s.names[pid]} stack ${cards.length}× (${describe(topCard)})`
+      : `${s.names[pid]} main ${describe(topCard)}`;
 
-    if (card.kind === "skip") {
-      advance(s, 2);
-      desc += ` — ${s.names[s.order[s.currentTurn]] || "berikutnya"} ke-skip`;
-    } else if (card.kind === "reverse") {
-      if (n === 2) {
-        advance(s, 2); // 2 pemain: reverse = skip (main lagi)
-      } else {
-        s.direction *= -1;
-        advance(s, 1);
-      }
+    if (group === "plus") {
+      const add = cards.reduce((sum, c) => sum + (c.kind === "wild4" ? 4 : 2), 0);
+      s.pendingDraw += add;
+      desc += ` — tarik gantung ${s.pendingDraw}`;
+      advance(s, 1); // lempar ke pemain berikut buat nangkis/tarik
+    } else if (group === "act:skip") {
+      advance(s, cards.length + 1);
+      desc += ` — skip ${cards.length}`;
+    } else if (group === "act:reverse") {
+      if (cards.length % 2 === 1) s.direction *= -1;
+      advance(s, n === 2 && cards.length % 2 === 1 ? 2 : 1);
       desc += " — arah dibalik";
-    } else if (card.kind === "draw2") {
-      const victim = s.order[nextIndex(s)];
-      s.hands[victim].push(...drawCards(s, 2));
-      desc += ` — ${s.names[victim]} tarik 2`;
-      advance(s, 2);
-    } else if (card.kind === "wild") {
-      desc += ` — warna jadi ${describe({ kind: "num", color: card.color, value: "" }).trim()}`;
-      advance(s, 1);
-    } else if (card.kind === "wild4") {
-      const victim = s.order[nextIndex(s)];
-      s.hands[victim].push(...drawCards(s, 4));
-      desc += ` — ${s.names[victim]} tarik 4, warna ganti`;
-      advance(s, 2);
     } else {
-      advance(s, 1); // num biasa
+      advance(s, 1); // angka / wild biasa
     }
 
     s.lastAction = desc;
+    maybeRecycle(s);
     return s;
   },
 
@@ -219,36 +264,44 @@ module.exports = {
     return state.winner || null;
   },
 
-  // Dipanggil server pas ada pemain keluar di tengah game (uno bisa lanjut kalau ≥2).
   removePlayer(state, playerId) {
     const s = structuredClone(state);
     const idx = s.order.indexOf(playerId);
     if (idx === -1) return s;
-
     delete s.hands[playerId];
     delete s.names[playerId];
     s.order.splice(idx, 1);
-
     if (s.order.length === 0) return s;
     if (idx < s.currentTurn) s.currentTurn -= 1;
     if (s.currentTurn >= s.order.length) s.currentTurn = 0;
     s.drawnThisTurn = false;
-
-    if (s.order.length === 1) s.winner = s.order[0]; // tinggal 1 → menang
+    if (s.order.length === 1) s.winner = s.order[0];
     return s;
   },
 
   getPlayerView(state, playerId) {
     const top = state.discardPile[state.discardPile.length - 1];
+    const hand = state.hands[playerId] || [];
     const meIsCurrent = state.order[state.currentTurn] === playerId;
-    const myHand = (state.hands[playerId] || []).map((card) => ({
-      ...card,
-      playable: matches(card, top, state.currentColor),
-    }));
+    const pending = state.pendingDraw;
+
+    // grup mana yang punya ≥1 kartu yang sah jadi kartu bawah → semua kartu grup itu "playable"
+    const groupCanStart = {};
+    for (const c of hand) {
+      const g = cardGroup(c);
+      if (!(g in groupCanStart)) groupCanStart[g] = false;
+      if (matches(c, top, state.currentColor)) groupCanStart[g] = true;
+    }
+
+    const myHand = hand.map((c) => {
+      const group = cardGroup(c);
+      const playable = pending > 0 ? isPlus(c) : !!groupCanStart[group];
+      // matchesTop = kartu ini sah jadi PALING BAWAH (buat aturan stack di client)
+      return { ...c, group, playable, matchesTop: matches(c, top, state.currentColor) };
+    });
 
     return {
       myHand,
-      // lawan: urut sesuai giliran, cuma keliatan JUMLAH kartunya
       opponents: state.order
         .filter((id) => id !== playerId)
         .map((id) => ({
@@ -263,6 +316,8 @@ module.exports = {
       direction: state.direction,
       drawPileCount: state.drawPile.length,
       iDrew: meIsCurrent ? state.drawnThisTurn : false,
+      pendingDraw: pending,
+      mustRespondPlus: meIsCurrent && pending > 0, // giliranku & ada tumpukan plus
       unoNames: state.order
         .filter((id) => state.hands[id] && state.hands[id].length === 1)
         .map((id) => state.names[id]),
