@@ -229,6 +229,19 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
 .uno-card.discard { width: 90px; font-size: 2.3rem; }
+
+/* tumpukan buangan tengah: kartu-kartu tercecer */
+.uno-discard-stack { position: relative; width: 90px; aspect-ratio: 826 / 1299; }
+.uno-discard-stack .uno-card.discard {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg));
+}
+.uno-discard-stack .uno-card.discard.played { animation: slamSpin 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes slamSpin {
+  0% { transform: translate(var(--dx, 0), calc(var(--dy, 0) - 52px)) rotate(calc(var(--spin, 0deg) - 14deg)) scale(1.3); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg)); opacity: 1; }
+}
 .uno-card.playable { outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
 @keyframes cardGlow {
   0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 0 rgba(74, 222, 128, 0); }

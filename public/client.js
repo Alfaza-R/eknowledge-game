@@ -484,10 +484,21 @@ function renderUno(view) {
   if (canDraw) deck.onclick = () => emitMove({ type: "draw" });
   piles.appendChild(deck);
 
-  const topEl = unoCardEl(g.topCard, {});
-  topEl.classList.add("discard");
-  if (topChanged) topEl.classList.add("played");
-  piles.appendChild(topEl);
+  // tumpukan buangan: 2–5 kartu terakhir, tercecer
+  const stack = document.createElement("div");
+  stack.className = "uno-discard-stack";
+  const recent = g.recentDiscard && g.recentDiscard.length ? g.recentDiscard : [g.topCard];
+  recent.forEach((card, i) => {
+    const el = unoCardEl(card, {});
+    el.classList.add("discard");
+    el.style.setProperty("--spin", (card.spin || 0) + "deg");
+    el.style.setProperty("--dx", (card.dx || 0) + "px");
+    el.style.setProperty("--dy", (card.dy || 0) + "px");
+    el.style.zIndex = i;
+    if (i === recent.length - 1 && topChanged) el.classList.add("played");
+    stack.appendChild(el);
+  });
+  piles.appendChild(stack);
   play.appendChild(piles);
 
   const color = document.createElement("div");
