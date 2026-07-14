@@ -28,6 +28,7 @@ let celebrated = false;
 // Uno: seleksi kartu buat stack. unoSel = index kartu terpilih (urutan tap = bawah→atas).
 let lastUnoView = null;
 let unoSel = [];
+let prevEventId = 0; // buat trigger animasi cangkul cuma sekali per event
 
 const $ = (id) => document.getElementById(id);
 const screens = {
@@ -149,7 +150,7 @@ socket.on("state", (view) => {
   unoSel = []; // tiap update dari server, reset seleksi (index tangan berubah)
   if (view.status === "lobby") {
     // reset penanda animasi tiap balik ke lobby (game baru)
-    prevBoard = null; prevTopSig = null; celebrated = false;
+    prevBoard = null; prevTopSig = null; celebrated = false; prevEventId = 0;
     renderLobby(view);
   } else if (view.gameType === "uno") renderUno(view);
   else if (view.gameType === "ludo") renderLudo(view);
@@ -503,12 +504,13 @@ function renderUno(view) {
     seat.className = "uno-seat" + (o.isTurn ? " turn" : "");
     seat.style.left = pos[idx].left + "%";
     seat.style.top = pos[idx].top + "%";
+    seat.dataset.pid = o.id; // buat target animasi cangkul
 
     // kipas punggung = jumlah kartu asli lawan (lebar kipas dijaga biar nggak melebar)
     const fan = document.createElement("div");
     fan.className = "seat-fan";
     const count = Math.min(o.count, 25); // batas aman DOM
-    const cardW = 26, areaW = 96;
+    const cardW = 34, areaW = 118;
     const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
     const arc = Math.min(58, count * 6); // total derajat kipas
     for (let i = 0; i < count; i++) {
@@ -547,21 +549,26 @@ function renderUno(view) {
       else selectable = card.group === selGroup;               // lagi milih: se-grup aja
     }
     const el = unoCardEl(card, { playable: myTurn && card.playable });
+
+    // Kartu dibungkus SLOT stabil yang nangkep hover — biar kartu naik tanpa geter.
+    const slot = document.createElement("div");
+    slot.className = "hand-slot";
     if (selected) {
-      el.classList.add("selected");
+      slot.classList.add("selected");
       const badge = document.createElement("span");
       badge.className = "sel-order";
       badge.textContent = selPos + 1;
-      el.appendChild(badge);
+      slot.appendChild(badge);
     } else if (inSelection && !selectable) {
-      el.classList.add("dimmed");
+      slot.classList.add("dimmed");
     }
-    if (selectable || selected) el.onclick = () => tapCard(i);
+    if (selectable || selected) slot.onclick = () => tapCard(i);
     const ang = (i - (n - 1) / 2) * spread;
-    el.style.setProperty("--ang", ang + "deg");
-    el.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
-    if (firstDeal) { el.classList.add("deal"); el.style.animationDelay = i * 45 + "ms"; }
-    hand.appendChild(el);
+    slot.style.setProperty("--ang", ang + "deg");
+    slot.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
+    if (firstDeal) { slot.classList.add("deal"); slot.style.animationDelay = i * 45 + "ms"; }
+    slot.appendChild(el);
+    hand.appendChild(slot);
   });
   table.appendChild(hand);
 
@@ -625,6 +632,40 @@ function renderUno(view) {
     }
   }
   if (controls.children.length) root.appendChild(controls);
+
+  // ===== animasi cangkul (kartu terbang dari deck ke yang narik) =====
+  const ev = g.lastEvent;
+  if (ev && ev.id !== prevEventId) {
+    prevEventId = ev.id;
+    if (ev.type === "draw") flyDraw(ev.by, g.youId);
+  }
+}
+
+// kartu terbang dari deck tengah ke pemain yang cangkul
+function flyDraw(byId, youId) {
+  const deck = document.querySelector(".uno-back.deck");
+  if (!deck) return;
+  const from = deck.getBoundingClientRect();
+  let target = null;
+  if (byId === youId) target = document.querySelector(".uno-hand-fan");
+  else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) target = s; });
+  const to = target ? target.getBoundingClientRect() : from;
+
+  const fly = document.createElement("div");
+  fly.className = "fly-card";
+  fly.style.width = from.width + "px";
+  fly.style.height = from.height + "px";
+  fly.style.left = from.left + "px";
+  fly.style.top = from.top + "px";
+  document.body.appendChild(fly);
+
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+  requestAnimationFrame(() => {
+    fly.style.transform = `translate(${dx}px, ${dy}px) scale(0.72) rotate(9deg)`;
+    fly.style.opacity = "0.12";
+  });
+  setTimeout(() => fly.remove(), 640);
 }
 
 function primaryBtn(text, onClick) {

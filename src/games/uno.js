@@ -139,6 +139,8 @@ module.exports = {
       drawnThisTurn: false,
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
       winner: null,
+      eventId: 0,     // naik tiap aksi — buat trigger animasi di client
+      lastEvent: null,
       lastAction: `Kartu pembuka: ${describe(start)}`,
     };
   },
@@ -190,12 +192,15 @@ module.exports = {
     const pid = s.order[s.currentTurn];
 
     if (move.type === "takeDraw") {
-      const drawn = drawCards(s, s.pendingDraw);
+      const n = s.pendingDraw;
+      const drawn = drawCards(s, n);
       s.hands[pid].push(...drawn);
-      s.lastAction = `${s.names[pid]} nyerah — tarik ${s.pendingDraw} kartu`;
+      s.lastAction = `${s.names[pid]} nyerah — tarik ${n} kartu`;
       s.pendingDraw = 0;
       s.drawnThisTurn = false;
       maybeRecycle(s);
+      s.eventId = (state.eventId || 0) + 1;
+      s.lastEvent = { id: s.eventId, type: "draw", by: pid, n };
       advance(s, 1);
       return s;
     }
@@ -206,6 +211,8 @@ module.exports = {
       s.drawnThisTurn = true;
       s.lastAction = `${s.names[pid]} ambil kartu`;
       maybeRecycle(s);
+      s.eventId = (state.eventId || 0) + 1;
+      s.lastEvent = { id: s.eventId, type: "draw", by: pid, n: 1 };
       return s;
     }
 
@@ -226,6 +233,8 @@ module.exports = {
     for (const c of cards) s.discardPile.push(c); // bawah → atas
     s.currentColor = topCard.color;
     s.drawnThisTurn = false;
+    s.eventId = (state.eventId || 0) + 1;
+    s.lastEvent = { id: s.eventId, type: "play", by: pid };
 
     if (s.hands[pid].length === 0) {
       s.winner = pid;
@@ -318,6 +327,8 @@ module.exports = {
       iDrew: meIsCurrent ? state.drawnThisTurn : false,
       pendingDraw: pending,
       mustRespondPlus: meIsCurrent && pending > 0, // giliranku & ada tumpukan plus
+      youId: playerId,
+      lastEvent: state.lastEvent,
       unoNames: state.order
         .filter((id) => state.hands[id] && state.hands[id].length === 1)
         .map((id) => state.names[id]),

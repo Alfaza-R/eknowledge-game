@@ -211,9 +211,9 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* kartu (muka) */
 .uno-card {
-  width: 48px; aspect-ratio: 826 / 1299; border-radius: 10px; flex: 0 0 auto; position: relative;
+  width: 66px; aspect-ratio: 826 / 1299; border-radius: 11px; flex: 0 0 auto; position: relative;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.35rem; font-weight: 800; color: #fff; user-select: none;
+  font-size: 1.7rem; font-weight: 800; color: #fff; user-select: none;
   border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
@@ -228,7 +228,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.green { background: var(--uno-green); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
-.uno-card.discard { width: 64px; font-size: 1.8rem; }
+.uno-card.discard { width: 90px; font-size: 2.3rem; }
 .uno-card.playable { outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
 @keyframes cardGlow {
   0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 0 rgba(74, 222, 128, 0); }
@@ -251,14 +251,25 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.18);
   display: flex; align-items: center; justify-content: center;
 }
-.uno-back.deck { width: 54px; cursor: default; }
+.uno-back.deck { width: 76px; cursor: default; }
 .uno-back.deck small {
   position: relative; z-index: 1; background: rgba(0, 0, 0, 0.6); color: #fff;
   font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
 }
 .uno-back.deck.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; }
 .uno-back.deck.playable:hover { transform: translateY(-4px); }
-.uno-back.mini { width: 26px; border-width: 1.5px; margin: 0; transform-origin: bottom center; }
+.uno-back.mini { width: 34px; border-width: 1.5px; margin: 0; transform-origin: bottom center; }
+
+/* kartu terbang pas cangkul (draw) */
+.fly-card {
+  position: fixed; z-index: 80; pointer-events: none; border-radius: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background:
+    radial-gradient(ellipse 62% 40% at 50% 50%, #fff 0 38%, transparent 40%),
+    linear-gradient(150deg, #e4483b, #a3201c);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+  transition: transform 0.58s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.58s ease;
+}
 
 /* kursi lawan */
 .uno-seat {
@@ -266,7 +277,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   z-index: 3; width: 120px;
 }
-.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 50px; overflow: visible; }
+.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; }
 .seat-info {
   display: flex; align-items: center; gap: 6px;
   background: rgba(10, 13, 20, 0.72); border: 1px solid var(--line);
@@ -290,26 +301,31 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* tangan kamu (kipas bawah) */
 .uno-hand-fan {
   position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%);
-  display: flex; align-items: flex-end; z-index: 5; padding-top: 60px;
+  display: flex; align-items: flex-end; z-index: 5; padding-top: 96px;
 }
-.uno-hand-fan .uno-card {
-  margin: 0 -6px; transform-origin: bottom center; position: relative;
+/* SLOT stabil = target hover; posisinya diam biar kartu naik tanpa geter */
+.uno-hand-fan .hand-slot {
+  margin: 0 -8px; position: relative; transform-origin: bottom center;
   transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px));
 }
-/* kartu yang BISA dimainkan naik lebih tinggi biar gampang dikenali */
-.uno-hand-fan .uno-card.playable {
-  cursor: pointer;
-  transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) - 24px));
+.uno-hand-fan .hand-slot .uno-card { transition: transform 0.14s ease; }
+/* kartu yang BISA dimainkan naik dikit biar gampang dikenali */
+.uno-hand-fan .hand-slot .uno-card.playable { cursor: pointer; transform: translateY(-28px); }
+/* HOVER pada slot (bukan kartu) → kartu naik & diluruskan, tapi area hover tetap */
+.uno-hand-fan .hand-slot:hover { z-index: 30; }
+.uno-hand-fan .hand-slot:hover .uno-card {
+  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(-74px) scale(1.18);
 }
-/* hover: kartu APA PUN (termasuk yang gak bisa dimainkan) naik paling atas
-   & diluruskan biar pemain tau itu kartu apa */
-.uno-hand-fan .uno-card:hover {
-  transform: translateY(calc(var(--lift, 0px) - 56px)) scale(1.14) rotate(0deg);
-  z-index: 30;
+/* kartu terpilih buat stack */
+.uno-hand-fan .hand-slot.selected { z-index: 26; }
+.uno-hand-fan .hand-slot.selected .uno-card {
+  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(-60px) scale(1.1);
+  outline: 3px solid var(--accent);
 }
-.uno-hand-fan .uno-card.deal { animation: dealFan 0.42s ease backwards; }
+.uno-hand-fan .hand-slot.dimmed { opacity: 0.35; filter: grayscale(0.5); }
+.uno-hand-fan .hand-slot.deal { animation: dealFan 0.42s ease backwards; }
 @keyframes dealFan {
-  from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + 48px)); opacity: 0; }
+  from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + 54px)); opacity: 0; }
   to   { transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px)); opacity: 1; }
 }
 
@@ -331,12 +347,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   animation: unoPulse 0.9s ease-in-out infinite;
 }
 
-/* kartu yang lagi dipilih buat stack */
-.uno-hand-fan .uno-card.selected {
-  transform: rotate(0deg) translateY(calc(var(--lift, 0px) - 44px)) scale(1.08);
-  outline: 3px solid var(--accent); z-index: 25;
-}
-.uno-hand-fan .uno-card.dimmed { opacity: 0.35; filter: grayscale(0.5); }
+/* badge urutan kartu terpilih (di slot) */
 .sel-order {
   position: absolute; top: -8px; left: -8px; width: 20px; height: 20px;
   background: var(--accent); color: #fff; border-radius: 50%;
