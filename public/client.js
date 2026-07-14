@@ -43,6 +43,7 @@ function show(name) {
   if (name !== "game") {
     $("game-root").classList.remove("wide");
     screens.game.classList.remove("uno-mode");
+    document.body.classList.remove("in-table-game");
   }
 }
 function myName() {
@@ -167,6 +168,7 @@ function renderTicTacToe(view) {
   const root = $("screen-game");
   root.classList.remove("uno-mode");
   $("game-root").classList.remove("wide");
+  document.body.classList.remove("in-table-game");
   root.innerHTML = `
     <p class="turn" id="ttt-turn"></p>
     <div id="board"></div>
@@ -261,6 +263,7 @@ function renderLudo(view) {
   const root = $("screen-game");
   root.classList.add("uno-mode");
   $("game-root").classList.add("wide");
+  document.body.classList.add("in-table-game"); // minta landscape di HP
   root.innerHTML = "";
 
   const playing = view.status === "playing";
@@ -445,6 +448,7 @@ function renderUno(view) {
   const root = $("screen-game");
   root.classList.add("uno-mode");
   $("game-root").classList.add("wide");
+  document.body.classList.add("in-table-game"); // minta landscape di HP
   root.innerHTML = "";
 
   const firstDeal = prevStatus !== "playing";
@@ -502,33 +506,39 @@ function renderUno(view) {
   const pos = seatPositions(g.opponents.length);
   g.opponents.forEach((o, idx) => {
     const seat = document.createElement("div");
-    seat.className = "uno-seat" + (o.isTurn ? " turn" : "");
+    seat.className = "uno-seat" + (o.isTurn ? " turn" : "") + (o.done ? " done" : "");
     seat.style.left = pos[idx].left + "%";
     seat.style.top = pos[idx].top + "%";
-    seat.dataset.pid = o.id; // buat target animasi cangkul
+    seat.dataset.pid = o.id; // buat target animasi
 
-    // kipas punggung = jumlah kartu asli lawan (lebar kipas dijaga biar nggak melebar)
+    // kipas punggung = jumlah kartu asli lawan (kalau udah selesai, gak usah)
     const fan = document.createElement("div");
     fan.className = "seat-fan";
-    const count = Math.min(o.count, 25); // batas aman DOM
-    const cardW = 34, areaW = 118;
-    const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
-    const arc = Math.min(58, count * 6); // total derajat kipas
-    for (let i = 0; i < count; i++) {
-      const b = unoBackEl("mini");
-      const ang = count > 1 ? (i - (count - 1) / 2) * (arc / (count - 1)) : 0;
-      if (i > 0) b.style.marginLeft = step - cardW + "px";
-      b.style.transform = `rotate(${ang}deg) translateY(${Math.abs(ang) * 0.3}px)`;
-      b.style.zIndex = i;
-      fan.appendChild(b);
+    if (!o.done) {
+      const count = Math.min(o.count, 25); // batas aman DOM
+      const cardW = 34, areaW = 118;
+      const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
+      const arc = Math.min(58, count * 6); // total derajat kipas
+      for (let i = 0; i < count; i++) {
+        const b = unoBackEl("mini");
+        const ang = count > 1 ? (i - (count - 1) / 2) * (arc / (count - 1)) : 0;
+        if (i > 0) b.style.marginLeft = step - cardW + "px";
+        b.style.transform = `rotate(${ang}deg) translateY(${Math.abs(ang) * 0.3}px)`;
+        b.style.zIndex = i;
+        fan.appendChild(b);
+      }
+    } else {
+      fan.innerHTML = '<span class="seat-medal">✅</span>';
     }
     seat.appendChild(fan);
 
     const info = document.createElement("div");
     info.className = "seat-info";
+    const countHtml = o.done
+      ? '<span class="seat-count done">selesai</span>'
+      : `<span class="seat-count">🂠 ${o.count}${o.count === 1 ? ' <span class="uno-badge">UNO!</span>' : ""}</span>`;
     info.innerHTML = `<div class="uno-avatar">${initial(o.name)}</div>
-      <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>
-      <span class="seat-count">🂠 ${o.count}${o.count === 1 ? ' <span class="uno-badge">UNO!</span>' : ""}</span></div>`;
+      <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>${countHtml}</div>`;
     seat.appendChild(info);
     table.appendChild(seat);
   });
@@ -573,17 +583,35 @@ function renderUno(view) {
   });
   table.appendChild(hand);
 
-  // ===== Hasil (overlay di atas meja) =====
+  // ===== Hasil akhir: papan ranking (juara → kalah terakhir) =====
   if (view.status === "finished") {
+    const ranking = g.ranking || [];
+    const iWon = ranking[0] && ranking[0].isYou;
     const over = document.createElement("div");
     over.className = "uno-result-overlay";
     const box = document.createElement("div");
-    box.className = "uno-result-box";
-    const r = document.createElement("p");
-    r.className = "result";
-    r.style.color = view.youWon ? "var(--ok)" : "var(--fg)";
-    r.textContent = view.resultText;
-    box.appendChild(r);
+    box.className = "uno-result-box standings";
+
+    const title = document.createElement("p");
+    title.className = "result";
+    title.style.color = iWon ? "var(--ok)" : "var(--fg)";
+    title.textContent = iWon ? "🏆 Kamu Juara!" : "Hasil Akhir";
+    box.appendChild(title);
+
+    const list = document.createElement("div");
+    list.className = "standings-list";
+    ranking.forEach((p, i) => {
+      const last = i === ranking.length - 1;
+      const medal = i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : last ? "💀" : "🎖️";
+      const row = document.createElement("div");
+      row.className = "standings-row" + (p.isYou ? " you" : "") + (last ? " loser" : "");
+      row.innerHTML = `<span class="st-rank">${medal}</span>
+        <span class="st-name">${escapeHtml(p.name)}${p.isYou ? " (kamu)" : ""}</span>
+        <span class="st-pos">#${i + 1}</span>`;
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+
     if (view.youAreHost) {
       const again = document.createElement("button");
       again.className = "primary";
@@ -593,7 +621,7 @@ function renderUno(view) {
     }
     over.appendChild(box);
     table.appendChild(over);
-    if (view.youWon && !celebrated) { celebrated = true; confettiBurst(); }
+    if (iWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
 
   root.appendChild(table);
@@ -634,12 +662,66 @@ function renderUno(view) {
   }
   if (controls.children.length) root.appendChild(controls);
 
-  // ===== animasi cangkul (kartu terbang dari deck ke yang narik) =====
+  // ===== animasi berdasarkan event terakhir =====
   const ev = g.lastEvent;
   if (ev && ev.id !== prevEventId) {
     prevEventId = ev.id;
     if (ev.type === "draw") flyDraw(ev.by, g.youId);
+    else if (ev.type === "play") {
+      flyPlay(ev.by, g.youId, ev.n || 1);       // kartu terbang ke tengah + jumlahnya
+      if (ev.finished) victoryPop(ev.by, g, ev.rank); // ada yang selesai → animasi menang
+    }
   }
+}
+
+// kartu terbang dari pemain yang main ke tumpukan tengah (+ tampil jumlahnya)
+function flyPlay(byId, youId, n) {
+  const discard = document.querySelector(".uno-card.discard");
+  if (!discard) return;
+  const to = discard.getBoundingClientRect();
+  let source = null;
+  if (byId === youId) source = document.querySelector(".uno-hand-fan");
+  else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) source = s; });
+  const from = source ? source.getBoundingClientRect() : to;
+  const startL = from.left + from.width / 2 - to.width / 2;
+  const startT = from.top + from.height / 2 - to.height / 2;
+  const dx = to.left - startL, dy = to.top - startT;
+
+  for (let k = 0; k < Math.min(n, 5); k++) {
+    const fly = document.createElement("div");
+    fly.className = "fly-card";
+    fly.style.width = to.width + "px"; fly.style.height = to.height + "px";
+    fly.style.left = startL + "px"; fly.style.top = startT + "px";
+    document.body.appendChild(fly);
+    setTimeout(() => requestAnimationFrame(() => {
+      fly.style.transform = `translate(${dx}px, ${dy}px) rotate(${(k - 1) * 5}deg)`;
+      fly.style.opacity = "0";
+    }), k * 75);
+    setTimeout(() => fly.remove(), 600 + k * 75);
+  }
+  if (n > 1) {
+    const pop = document.createElement("div");
+    pop.className = "count-pop";
+    pop.textContent = "×" + n;
+    pop.style.left = to.left + to.width / 2 + "px";
+    pop.style.top = to.top + "px";
+    document.body.appendChild(pop);
+    setTimeout(() => pop.remove(), 1100);
+  }
+}
+
+// animasi pas ada pemain selesai (juara ke-N)
+function victoryPop(byId, g, rank) {
+  const name = byId === g.youId ? "Kamu" : (g.opponents.find((o) => o.id === byId)?.name || "Pemain");
+  const medal = rank === 1 ? "🏆" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🎖️";
+  const banner = document.createElement("div");
+  banner.className = "victory-pop";
+  banner.innerHTML = `<span class="vp-medal">${medal}</span><span>${escapeHtml(name)} selesai — Juara #${rank}!</span>`;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add("show"));
+  setTimeout(() => banner.classList.remove("show"), 2200);
+  setTimeout(() => banner.remove(), 2700);
+  if (rank === 1 || byId === g.youId) confettiBurst();
 }
 
 // kartu terbang dari deck tengah ke pemain yang cangkul

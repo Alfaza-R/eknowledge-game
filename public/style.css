@@ -373,7 +373,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .ludo-wrap { display: flex; gap: 1rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
 .ludo-board {
   display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr);
-  width: min(90vw, 540px); aspect-ratio: 1; position: relative;
+  width: min(92vw, 82vh, 540px); aspect-ratio: 1; position: relative;
   background: #0b0e14; border: 2px solid var(--line); border-radius: 12px; overflow: hidden;
 }
 .lc { position: relative; }
@@ -456,6 +456,65 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   z-index: 60; pointer-events: none; animation: confettiFall linear forwards;
 }
 @keyframes confettiFall { to { transform: translateY(120vh) rotate(720deg); opacity: 0.9; } }
+
+/* jumlah kartu yang ditaro (×N) */
+.count-pop {
+  position: fixed; transform: translate(-50%, -50%); z-index: 85; pointer-events: none;
+  font-size: 1.9rem; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent);
+  animation: countPop 1.1s ease forwards;
+}
+@keyframes countPop {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); }
+  25% { opacity: 1; transform: translate(-50%, -65%) scale(1.25); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+}
+
+/* banner pas ada yang selesai (juara) */
+.victory-pop {
+  position: fixed; top: 20%; left: 50%; transform: translate(-50%, -20px) scale(0.8);
+  z-index: 90; pointer-events: none; opacity: 0;
+  background: linear-gradient(135deg, #f2b400, #e4483b); color: #fff;
+  padding: 0.8rem 1.4rem; border-radius: 14px; font-weight: 800; font-size: 1.1rem;
+  display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+}
+.victory-pop.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.victory-pop .vp-medal { font-size: 1.5rem; }
+
+/* papan ranking hasil akhir */
+.uno-result-box.standings { min-width: 270px; }
+.standings-list { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.9rem 0; }
+.standings-row {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.8rem;
+  border: 1px solid var(--line); border-radius: 10px; background: #12151b;
+}
+.standings-row.you { border-color: var(--accent); }
+.standings-row.loser { border-color: var(--danger); }
+.standings-row .st-rank { font-size: 1.3rem; }
+.standings-row .st-name { flex: 1; text-align: left; font-weight: 600; }
+.standings-row .st-pos { color: var(--muted); font-weight: 700; }
+
+/* lawan yang udah selesai */
+.uno-seat.done { opacity: 0.7; }
+.uno-seat.done .uno-avatar { box-shadow: 0 0 0 2px var(--ok); }
+.seat-medal { font-size: 1.7rem; }
+.seat-count.done { color: var(--ok); font-weight: 700; }
+
+/* minta HP diputar horizontal pas main game meja */
+#rotate-prompt { display: none; }
+.rotate-icon { font-size: 4.5rem; animation: rotateHint 2s ease-in-out infinite; }
+@keyframes rotateHint { 0%, 40% { transform: rotate(0); } 60%, 100% { transform: rotate(90deg); } }
+@media (max-width: 900px) and (orientation: portrait) {
+  body.in-table-game #game-root { display: none; }
+  body.in-table-game #rotate-prompt {
+    display: flex; position: fixed; inset: 0; z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.2rem; text-align: center; padding: 2rem;
+    background: radial-gradient(1000px 500px at 50% -10%, #1c2536, transparent 60%), var(--bg);
+  }
+  body.in-table-game #rotate-prompt p { color: var(--fg); font-size: 1.15rem; max-width: 300px; line-height: 1.5; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

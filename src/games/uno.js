@@ -96,9 +96,18 @@ function maybeRecycle(state) {
   }
 }
 
-function advance(state, steps) {
+// pindah ke pemain AKTIF berikutnya (lewati yang udah selesai kartunya)
+function nextActiveIndex(state, fromIdx) {
   const n = state.order.length;
-  state.currentTurn = (((state.currentTurn + state.direction * steps) % n) + n) % n;
+  let idx = fromIdx;
+  for (let k = 0; k < n; k++) {
+    idx = (((idx + state.direction) % n) + n) % n;
+    if (!state.finished.includes(state.order[idx])) return idx;
+  }
+  return fromIdx;
+}
+function advance(state, steps) {
+  for (let s = 0; s < steps; s++) state.currentTurn = nextActiveIndex(state, state.currentTurn);
   state.drawnThisTurn = false;
 }
 
@@ -138,7 +147,11 @@ module.exports = {
       direction: 1,
       drawnThisTurn: false,
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
-      winner: null,
+      winner: null,   // juara pertama (kartu habis duluan)
+      finished: [],   // urutan pemain yang udah habis kartunya (ranking juara)
+      over: false,    // game beneran selesai (tersisa ≤1 pemain aktif)
+      loser: null,    // pemain terakhir yang masih pegang kartu
+      ranking: [],
       eventId: 0,     // naik tiap aksi — buat trigger animasi di client
       lastEvent: null,
       lastAction: `Kartu pembuka: ${describe(start)}`,
@@ -146,7 +159,7 @@ module.exports = {
   },
 
   validateMove(state, playerId, move) {
-    if (state.winner) return false;
+    if (state.over) return false; // game udah bubar
     if (state.order[state.currentTurn] !== playerId) return false;
     if (!move || !move.type) return false;
     const hand = state.hands[playerId];
@@ -234,31 +247,47 @@ module.exports = {
     s.currentColor = topCard.color;
     s.drawnThisTurn = false;
     s.eventId = (state.eventId || 0) + 1;
-    s.lastEvent = { id: s.eventId, type: "play", by: pid };
 
-    if (s.hands[pid].length === 0) {
-      s.winner = pid;
-      s.lastAction = `${s.names[pid]} MENANG! 🎉`;
+    // pemain ini habis kartunya → masuk ranking juara (game tetep lanjut)
+    const justFinished = s.hands[pid].length === 0 && !s.finished.includes(pid);
+    if (justFinished) {
+      s.finished.push(pid);
+      if (!s.winner) s.winner = pid; // juara pertama
+    }
+    s.lastEvent = {
+      id: s.eventId, type: "play", by: pid, n: cards.length,
+      finished: justFinished, rank: justFinished ? s.finished.length : null,
+    };
+
+    const group = cardGroup(cards[0]);
+    let desc = justFinished
+      ? `${s.names[pid]} SELESAI — juara #${s.finished.length}! 🎉`
+      : cards.length > 1
+        ? `${s.names[pid]} buang ${cards.length} kartu (${describe(topCard)})`
+        : `${s.names[pid]} main ${describe(topCard)}`;
+
+    // tersisa ≤1 pemain aktif → game bubar, yang tersisa = kalah terakhir
+    const active = s.order.filter((id) => !s.finished.includes(id));
+    if (active.length <= 1) {
+      s.over = true;
+      s.loser = active[0] || null;
+      s.ranking = [...s.finished, ...(s.loser ? [s.loser] : [])];
+      s.lastAction = desc;
       return s;
     }
 
-    const group = cardGroup(cards[0]);
-    const n = s.order.length;
-    let desc = cards.length > 1
-      ? `${s.names[pid]} stack ${cards.length}× (${describe(topCard)})`
-      : `${s.names[pid]} main ${describe(topCard)}`;
-
+    // efek kartu (advance otomatis skip yang udah selesai)
     if (group === "plus") {
       const add = cards.reduce((sum, c) => sum + (c.kind === "wild4" ? 4 : 2), 0);
       s.pendingDraw += add;
       desc += ` — tarik gantung ${s.pendingDraw}`;
-      advance(s, 1); // lempar ke pemain berikut buat nangkis/tarik
+      advance(s, 1);
     } else if (group === "act:skip") {
       advance(s, cards.length + 1);
       desc += ` — skip ${cards.length}`;
     } else if (group === "act:reverse") {
       if (cards.length % 2 === 1) s.direction *= -1;
-      advance(s, n === 2 && cards.length % 2 === 1 ? 2 : 1);
+      advance(s, active.length === 2 && cards.length % 2 === 1 ? 2 : 1);
       desc += " — arah dibalik";
     } else {
       advance(s, 1); // angka / wild biasa
@@ -270,21 +299,27 @@ module.exports = {
   },
 
   checkEnd(state) {
-    return state.winner || null;
+    return state.over ? state.loser || "over" : null;
   },
 
   removePlayer(state, playerId) {
     const s = structuredClone(state);
     const idx = s.order.indexOf(playerId);
     if (idx === -1) return s;
-    delete s.hands[playerId];
-    delete s.names[playerId];
+    delete s.hands[playerId]; // nama disimpen buat ranking
     s.order.splice(idx, 1);
-    if (s.order.length === 0) return s;
+    s.finished = s.finished.filter((id) => id !== playerId);
+    if (s.order.length === 0) { s.over = true; return s; }
     if (idx < s.currentTurn) s.currentTurn -= 1;
     if (s.currentTurn >= s.order.length) s.currentTurn = 0;
+    if (s.finished.includes(s.order[s.currentTurn])) s.currentTurn = nextActiveIndex(s, s.currentTurn);
     s.drawnThisTurn = false;
-    if (s.order.length === 1) s.winner = s.order[0];
+    const active = s.order.filter((id) => !s.finished.includes(id));
+    if (active.length <= 1) {
+      s.over = true;
+      s.loser = active[0] || null;
+      s.ranking = [...s.finished, ...(s.loser ? [s.loser] : [])];
+    }
     return s;
   },
 
@@ -318,6 +353,7 @@ module.exports = {
           name: state.names[id],
           count: state.hands[id].length,
           isTurn: state.order[state.currentTurn] === id,
+          done: state.finished.includes(id),
         })),
       topCard: top,
       currentColor: state.currentColor,
@@ -332,6 +368,13 @@ module.exports = {
       unoNames: state.order
         .filter((id) => state.hands[id] && state.hands[id].length === 1)
         .map((id) => state.names[id]),
+      // ranking / status selesai
+      over: !!state.over,
+      winnerId: state.winner || null,
+      iAmDone: state.finished.includes(playerId),
+      ranking: (state.ranking || []).map((id, i) => ({
+        rank: i + 1, id, name: state.names[id], isYou: id === playerId,
+      })),
       lastAction: state.lastAction,
     };
   },
