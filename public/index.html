@@ -57,6 +57,18 @@
     <!-- SCREEN 3: game (diisi per-game oleh client.js) -->
     <section id="screen-game" class="screen hidden"></section>
 
+    <!-- isi nama dulu sebelum masuk room (dari link undangan / kode) -->
+    <section id="screen-join" class="screen hidden">
+      <h1>Masuk Room</h1>
+      <p class="sub">Kode: <span id="join-code" class="code"></span></p>
+      <label>Nama kamu
+        <input id="input-name-join" type="text" placeholder="Ketik nama kamu" maxlength="20" />
+      </label>
+      <button id="btn-enter" class="primary">Masuk</button>
+      <button id="btn-join-back" class="link-back" style="float:none; margin-top:.8rem;">← Batal</button>
+      <p id="join-error" class="error"></p>
+    </section>
+
     <!-- loading kecil pas nyambung via link undangan -->
     <section id="screen-loading" class="screen hidden">
       <p class="sub">Menyambung ke room…</p>

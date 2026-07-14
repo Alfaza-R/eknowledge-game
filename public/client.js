@@ -34,10 +34,12 @@ const $ = (id) => document.getElementById(id);
 const screens = {
   select: $("screen-select"),
   home: $("screen-home"),
+  join: $("screen-join"),
   lobby: $("screen-lobby"),
   game: $("screen-game"),
   loading: $("screen-loading"),
 };
+let pendingJoinRoom = null; // kode room yang mau dimasukin (nunggu isi nama)
 function show(name) {
   for (const k in screens) screens[k].classList.toggle("hidden", k !== name);
   if (name !== "game") {
@@ -79,14 +81,33 @@ function openHome(key) {
 
 $("btn-back").onclick = () => show("select");
 
-// gabung via kode dari layar pilih (game-agnostik)
+// ===========================================================================
+// LAYAR ISI NAMA (wajib sebelum masuk room — gak boleh Guest)
+// ===========================================================================
+function showJoinScreen(code) {
+  pendingJoinRoom = code;
+  $("join-code").textContent = code;
+  $("input-name-join").value = ($("input-name").value || "").trim() || nameFromUrl || "";
+  $("join-error").textContent = "";
+  show("join");
+  setTimeout(() => $("input-name-join").focus(), 50);
+}
+$("btn-join-back").onclick = () => show("select");
+$("btn-enter").onclick = () => {
+  const name = $("input-name-join").value.trim();
+  if (!name) { $("join-error").textContent = "Isi nama kamu dulu ya 🙂"; return; }
+  show("loading");
+  socket.emit("joinRoom", { roomId: pendingJoinRoom, name }, (res) => {
+    if (res.ok) currentRoom = res.roomId;
+    else { $("join-error").textContent = res.error || "Gagal masuk"; show("join"); }
+  });
+};
+
+// gabung via kode dari layar pilih → isi nama dulu
 $("btn-join-select").onclick = () => {
   const roomId = $("input-room-select").value.trim().toUpperCase();
   if (!roomId) { $("select-error").textContent = "Isi kode room dulu"; return; }
-  socket.emit("joinRoom", { roomId, name: myName() }, (res) => {
-    if (res.ok) currentRoom = res.roomId;
-    else $("select-error").textContent = res.error || "Gagal gabung";
-  });
+  showJoinScreen(roomId);
 };
 
 // ===========================================================================
@@ -102,10 +123,7 @@ $("btn-create").onclick = () => {
 $("btn-join").onclick = () => {
   const roomId = $("input-room").value.trim().toUpperCase();
   if (!roomId) { $("home-error").textContent = "Isi kode room dulu"; return; }
-  socket.emit("joinRoom", { roomId, name: myName() }, (res) => {
-    if (res.ok) currentRoom = res.roomId;
-    else $("home-error").textContent = res.error || "Gagal gabung";
-  });
+  showJoinScreen(roomId);
 };
 
 // ===========================================================================
@@ -886,11 +904,13 @@ function showColorPicker(onPick) {
 // AUTO-JOIN via link undangan (?room=)
 // ===========================================================================
 socket.on("connect", () => {
-  if (roomFromUrl && !currentRoom) {
+  // auto-join CUMA kalau nama udah ada dari URL (mis. dari WordPress ?name=).
+  // Kalau cuma ?room= tanpa nama, init() bakal munculin layar isi nama.
+  if (roomFromUrl && !currentRoom && nameFromUrl) {
     show("loading");
-    socket.emit("joinRoom", { roomId: roomFromUrl, name: myName() }, (res) => {
+    socket.emit("joinRoom", { roomId: roomFromUrl, name: nameFromUrl }, (res) => {
       if (res.ok) currentRoom = res.roomId;
-      else init(); // gagal (penuh/udah mulai) → balik ke awal
+      else init();
     });
   }
 });
@@ -906,9 +926,10 @@ socket.on("disconnect", () => {
 // ===========================================================================
 function init() {
   buildGameList();
-  if (roomFromUrl) show("loading");          // nunggu auto-join
+  if (roomFromUrl && nameFromUrl) show("loading");     // nama udah ada → auto-join
+  else if (roomFromUrl) showJoinScreen(roomFromUrl);   // ada kode link → isi nama dulu
   else if (gameFromUrl && GAMES[gameFromUrl]) openHome(gameFromUrl); // deep-link 1 game
-  else show("select");                        // buka game.taharica.com langsung
+  else show("select");                                  // buka game.taharica.com langsung
 }
 
 function confettiBurst() {
