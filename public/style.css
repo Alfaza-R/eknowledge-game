@@ -373,10 +373,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* badge urutan kartu terpilih (di slot) */
 .sel-order {
-  position: absolute; top: -8px; left: -8px; width: 20px; height: 20px;
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  width: 28px; height: 28px; z-index: 10;
   background: var(--accent); color: #fff; border-radius: 50%;
-  font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); border: 1.5px solid #fff;
+  font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); border: 2px solid #fff;
 }
 
 /* hasil menang (overlay di atas meja) */

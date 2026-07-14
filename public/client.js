@@ -379,6 +379,23 @@ const DIR_COLOR = {
   green: "rgba(63,174,74,0.42)", blue: "rgba(59,125,228,0.42)",
 };
 
+// urutan tampil kartu di tangan: dikumpulin per simbol (angka → aksi → wild), warna jadi tiebreak
+function cardRank(card) {
+  const color = { red: 0, yellow: 1, green: 2, blue: 3 }[card.color] ?? 4;
+  if (card.kind === "num") return [0, card.value, color];
+  if (card.kind === "skip") return [1, 0, color];
+  if (card.kind === "reverse") return [1, 1, color];
+  if (card.kind === "draw2") return [1, 2, color];
+  if (card.kind === "wild") return [2, 0, 0];
+  if (card.kind === "wild4") return [2, 1, 0];
+  return [3, 0, 0];
+}
+function cmpCard(a, b) {
+  const ra = cardRank(a), rb = cardRank(b);
+  for (let k = 0; k < 3; k++) if (ra[k] !== rb[k]) return ra[k] - rb[k];
+  return 0;
+}
+
 // Warna yang PNG kartunya udah ada.
 const ASSET_COLORS = new Set(["red", "yellow", "green", "blue"]);
 // Prefix nama file per warna sesuai file user: m=merah, k=kuning, h=hijau, b=biru.
@@ -571,7 +588,9 @@ function renderUno(view) {
   const n = g.myHand.length;
   const spread = Math.min(8, 78 / Math.max(n, 1));
   const myTurn = playing && view.isMyTurn;
-  g.myHand.forEach((card, i) => {
+  // urutin tampilan per simbol biar rapi; tetep simpen index asli buat tapCard
+  const ordered = g.myHand.map((card, i) => ({ card, i })).sort((a, b) => cmpCard(a.card, b.card));
+  ordered.forEach(({ card, i }, pos) => {
     const selPos = unoSel.indexOf(i);
     const selected = selPos >= 0;
     // kartu ini bisa dipilih?
@@ -582,24 +601,24 @@ function renderUno(view) {
       else selectable = card.group === selGroup;               // lagi milih: se-grup aja
     }
     const el = unoCardEl(card, { playable: myTurn && card.playable });
+    if (selected) {
+      // nomor urutan stack — ditaro DI DEPAN kartu biar keliatan
+      const badge = document.createElement("span");
+      badge.className = "sel-order";
+      badge.textContent = selPos + 1;
+      el.appendChild(badge);
+    }
 
     // Kartu dibungkus SLOT stabil yang nangkep hover — biar kartu naik tanpa geter.
     const slot = document.createElement("div");
     slot.className = "hand-slot";
-    if (selected) {
-      slot.classList.add("selected");
-      const badge = document.createElement("span");
-      badge.className = "sel-order";
-      badge.textContent = selPos + 1;
-      slot.appendChild(badge);
-    } else if (inSelection && !selectable) {
-      slot.classList.add("dimmed");
-    }
+    if (selected) slot.classList.add("selected");
+    else if (inSelection && !selectable) slot.classList.add("dimmed");
     if (selectable || selected) slot.onclick = () => tapCard(i);
-    const ang = (i - (n - 1) / 2) * spread;
+    const ang = (pos - (n - 1) / 2) * spread;
     slot.style.setProperty("--ang", ang + "deg");
     slot.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
-    if (firstDeal) { slot.classList.add("deal"); slot.style.animationDelay = i * 45 + "ms"; }
+    if (firstDeal) { slot.classList.add("deal"); slot.style.animationDelay = pos * 45 + "ms"; }
     slot.appendChild(el);
     hand.appendChild(slot);
   });
