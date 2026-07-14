@@ -189,9 +189,10 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* arah putaran (placeholder — nanti bisa diganti aset PNG panah) */
 .uno-dir {
   position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  font-size: clamp(120px, 24vw, 240px); line-height: 1;
-  color: rgba(255, 255, 255, 0.06); z-index: 0; pointer-events: none;
+  font-size: clamp(180px, 34vw, 360px); line-height: 1; font-weight: 700;
+  color: rgba(255, 255, 255, 0.08); z-index: 0; pointer-events: none;
   animation: spin 16s linear infinite;
+  transition: color 0.3s ease;
 }
 .uno-dir.ccw { animation-direction: reverse; }
 @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
@@ -201,7 +202,18 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
   z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
 }
-.uno-piles { display: flex; align-items: center; gap: 0.9rem; }
+.uno-piles { display: flex; align-items: center; gap: 1.9rem; }
+
+/* deck numpuk rapi (bukan berantakan) */
+.uno-deck-stack { position: relative; width: 76px; aspect-ratio: 826 / 1299; flex: 0 0 auto; transition: transform 0.12s ease; }
+.uno-deck-stack .uno-back.deck {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  transform: translate(calc(var(--i) * 3px), calc(var(--i) * 3px));
+  z-index: calc(10 - var(--i));
+}
+.uno-deck-stack.playable { cursor: pointer; }
+.uno-deck-stack.playable:hover { transform: translateY(-5px); }
+.uno-deck-stack.playable .uno-back.deck:nth-child(1) { outline: 2px solid var(--ok); outline-offset: 2px; }
 .uno-color { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--fg); font-weight: 600; }
 .uno-color span { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 .uno-color.red span { background: var(--uno-red); }

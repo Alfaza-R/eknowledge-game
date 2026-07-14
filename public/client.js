@@ -374,6 +374,10 @@ function renderLudo(view) {
 // ---------------------------------------------------------------------------
 const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4" };
 const COLOR_ID = { red: "Merah", yellow: "Kuning", green: "Hijau", blue: "Biru" };
+const DIR_COLOR = {
+  red: "rgba(228,72,59,0.42)", yellow: "rgba(242,180,0,0.48)",
+  green: "rgba(63,174,74,0.42)", blue: "rgba(59,125,228,0.42)",
+};
 
 // Warna yang PNG kartunya udah ada.
 const ASSET_COLORS = new Set(["red", "yellow", "green", "blue"]);
@@ -471,6 +475,7 @@ function renderUno(view) {
   const dir = document.createElement("div");
   dir.className = "uno-dir " + (g.direction === 1 ? "cw" : "ccw");
   dir.textContent = g.direction === 1 ? "↻" : "↺";
+  dir.style.color = DIR_COLOR[g.currentColor] || "rgba(255,255,255,0.08)";
   table.appendChild(dir);
 
   // pusat: deck + buangan + warna aktif
@@ -479,10 +484,16 @@ function renderUno(view) {
   const piles = document.createElement("div");
   piles.className = "uno-piles";
 
-  const deck = unoBackEl("deck" + (canDraw ? " playable" : ""));
-  deck.innerHTML = `<small>${g.drawPileCount}</small>`;
-  if (canDraw) deck.onclick = () => emitMove({ type: "draw" });
-  piles.appendChild(deck);
+  // deck: numpuk rapi (beberapa lapis punggung), tanpa nampilin jumlah
+  const deckStack = document.createElement("div");
+  deckStack.className = "uno-deck-stack" + (canDraw ? " playable" : "");
+  for (let i = 0; i < 4; i++) {
+    const b = unoBackEl("deck");
+    b.style.setProperty("--i", i);
+    deckStack.appendChild(b);
+  }
+  if (canDraw) deckStack.onclick = () => emitMove({ type: "draw" });
+  piles.appendChild(deckStack);
 
   // tumpukan buangan: 2–5 kartu terakhir, tercecer
   const stack = document.createElement("div");
