@@ -371,11 +371,47 @@ function renderLudo(view) {
 const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4" };
 const COLOR_ID = { red: "Merah", yellow: "Kuning", green: "Hijau", blue: "Biru" };
 
+// Warna yang PNG kartunya UDAH ada (tambahin pas warna baru dimasukin).
+const ASSET_COLORS = new Set(["red", "yellow"]);
+// Prefix nama file per warna sesuai file user: m=merah, k=kuning, h=hijau, b=biru.
+const COLOR_PREFIX = { red: "m", yellow: "k", green: "h", blue: "b" };
+
+// URL gambar kartu, atau null kalau belum ada asetnya (→ pakai placeholder).
+function cardImageUrl(card) {
+  if (card.kind === "wild" || card.kind === "wild4") return null; // aset wild belum ada
+  if (!ASSET_COLORS.has(card.color)) return null;
+  const p = COLOR_PREFIX[card.color];
+  const v =
+    card.kind === "num" ? String(card.value) :
+    card.kind === "draw2" ? "+2" :
+    card.kind === "skip" ? "skip" :
+    card.kind === "reverse" ? "reverse" : null;
+  if (v === null) return null;
+  // nama file ada spasi & "+", jadi di-encode
+  return "assets/cards/" + card.color + "/" + encodeURIComponent(p + " " + v) + ".png";
+}
+
 function unoCardEl(card, { playable = false, onClick = null } = {}) {
   const el = document.createElement("div");
   const colorClass = card.kind === "wild" || card.kind === "wild4" ? "wild" : card.color;
   el.className = `uno-card ${colorClass}` + (playable ? " playable" : "");
-  el.textContent = card.kind === "num" ? card.value : UNO_LABEL[card.kind];
+
+  const label = document.createElement("span");
+  label.className = "card-label";
+  label.textContent = card.kind === "num" ? card.value : UNO_LABEL[card.kind];
+  el.appendChild(label);
+
+  const src = cardImageUrl(card);
+  if (src) {
+    const img = document.createElement("img");
+    img.className = "card-img";
+    img.alt = "";
+    img.onload = () => el.classList.add("has-img"); // gambar ada → sembunyiin placeholder
+    img.onerror = () => img.remove();               // gambar gagal → balik ke placeholder
+    img.src = src;
+    el.appendChild(img);
+  }
+
   if (onClick) el.onclick = onClick;
   return el;
 }

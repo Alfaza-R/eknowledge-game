@@ -211,19 +211,24 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* kartu (muka) */
 .uno-card {
-  width: 48px; height: 70px; border-radius: 10px; flex: 0 0 auto;
+  width: 48px; aspect-ratio: 826 / 1299; border-radius: 10px; flex: 0 0 auto; position: relative;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.35rem; font-weight: 800; color: #fff; user-select: none;
   border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
+/* gambar kartu (PNG) nutupin placeholder pas berhasil load */
+.card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; z-index: 1; }
+.card-label { position: relative; z-index: 2; }
+.uno-card.has-img { background: none; border: none; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4); }
+.uno-card.has-img .card-label { display: none; }
 .uno-card.red { background: var(--uno-red); }
 .uno-card.yellow { background: var(--uno-yellow); color: #3a2c00; border-color: rgba(0, 0, 0, 0.22); }
 .uno-card.green { background: var(--uno-green); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
-.uno-card.discard { width: 62px; height: 90px; font-size: 1.8rem; }
+.uno-card.discard { width: 64px; font-size: 1.8rem; }
 .uno-card.playable { outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
 @keyframes cardGlow {
   0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.22), 0 0 0 rgba(74, 222, 128, 0); }
@@ -238,7 +243,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* punggung kartu (placeholder — ganti dengan background-image PNG nanti) */
 .uno-back {
-  width: 48px; height: 70px; border-radius: 10px; flex: 0 0 auto; position: relative;
+  width: 48px; aspect-ratio: 826 / 1299; border-radius: 10px; flex: 0 0 auto; position: relative;
   border: 2px solid rgba(255, 255, 255, 0.9);
   background:
     radial-gradient(ellipse 62% 40% at 50% 50%, #fff 0 38%, transparent 40%),
@@ -246,14 +251,14 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.18);
   display: flex; align-items: center; justify-content: center;
 }
-.uno-back.deck { width: 54px; height: 78px; cursor: default; }
+.uno-back.deck { width: 54px; cursor: default; }
 .uno-back.deck small {
   position: relative; z-index: 1; background: rgba(0, 0, 0, 0.6); color: #fff;
   font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 8px;
 }
 .uno-back.deck.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; }
 .uno-back.deck.playable:hover { transform: translateY(-4px); }
-.uno-back.mini { width: 26px; height: 38px; border-width: 1.5px; margin: 0; transform-origin: bottom center; }
+.uno-back.mini { width: 26px; border-width: 1.5px; margin: 0; transform-origin: bottom center; }
 
 /* kursi lawan */
 .uno-seat {
