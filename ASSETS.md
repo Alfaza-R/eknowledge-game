@@ -1,70 +1,73 @@
 # Panduan Aset PNG — Eknowledge Game (Uno)
 
-Daftar semua gambar PNG yang perlu dibikin buat ngeganti placeholder CSS sekarang.
-**Taro file-nya sesuai NAMA & FOLDER di bawah** — nanti tinggal bilang ke Claude "aset udah
-masuk", langsung di-wire ke game (nggak usah ngubah kode sendiri).
+Tempat naro desain PNG kartu: **`public/assets/cards/`**, dipisah per warna.
+Taro file sesuai NAMA & FOLDER di bawah, terus bilang ke Claude "aset udah masuk" →
+langsung di-wire ke game (nggak usah ngoding sendiri).
 
-> Sekarang semua masih placeholder (kartu = kotak warna + angka, punggung = merah + oval,
-> avatar = huruf awal nama, background = gradient). Begitu PNG-nya ada, diganti gambar asli.
+> Sekarang masih placeholder (kotak warna + angka). Begitu PNG ada, diganti gambar asli.
 
 ---
 
 ## Aturan umum
-- Format: **PNG** (transparan lebih bagus, terutama buat kartu biar sudutnya membulat rapi).
-- Kartu sebaiknya seragam rasio **2 : 3** (potrait). Rekomendasi **300 × 450 px** (tajam di HP retina).
-- Nama file **huruf kecil semua**, persis kayak daftar (biar kebaca kode otomatis).
+- Format **PNG**, transparan lebih bagus (biar sudut kartu membulat rapi).
+- Rasio kartu **2 : 3** (potrait). Rekomendasi **300 × 450 px**.
+- Nama file **huruf kecil semua**, persis kayak daftar.
 
 ---
 
-## 1. Muka kartu → folder `public/assets/cards/`
+## Struktur folder kartu
 
-### a. Kartu angka (40 file)
-Pola nama: **`<warna>_<angka>.png>`** — warna: `red`, `yellow`, `green`, `blue`; angka `0`–`9`.
+```
+public/assets/cards/
+├── red/       ← kartu MERAH
+├── yellow/    ← kartu KUNING
+├── green/     ← kartu HIJAU
+├── blue/      ← kartu BIRU
+├── wild/      ← kartu WILD (hitam)
+└── back.png   ← punggung kartu (1 file)
+```
 
-| Warna | File |
+### Isi tiap folder warna (`red/`, `yellow/`, `green/`, `blue/`) — 13 file per folder
+Nama filenya **sama di tiap folder** (yang beda cuma warnanya):
+
+| Kartu | Nama file |
 |---|---|
-| Merah | `red_0.png`, `red_1.png`, … `red_9.png` |
-| Kuning | `yellow_0.png` … `yellow_9.png` |
-| Hijau | `green_0.png` … `green_9.png` |
-| Biru | `blue_0.png` … `blue_9.png` |
+| Angka 0–9 | `0.png`, `1.png`, `2.png`, … `9.png` (10 file) |
+| Skip | `skip.png` |
+| Reverse | `reverse.png` |
+| +2 | `plus2.png` |
 
-### b. Kartu aksi (12 file)
-Pola: **`<warna>_<aksi>.png`** — aksi: `skip`, `reverse`, `draw2` (ini kartu +2).
+Contoh: kartu **merah 7** → `red/7.png`. Kartu **biru skip** → `blue/skip.png`.
+Kartu **kuning +2** → `yellow/plus2.png`.
 
-`red_skip.png`, `red_reverse.png`, `red_draw2.png`
-`yellow_skip.png`, `yellow_reverse.png`, `yellow_draw2.png`
-`green_skip.png`, `green_reverse.png`, `green_draw2.png`
-`blue_skip.png`, `blue_reverse.png`, `blue_draw2.png`
+### Isi folder `wild/` (hitam) — 2 file
+| Kartu | Nama file |
+|---|---|
+| Wild (ganti warna) | `wild/wild.png` |
+| Wild +4 | `wild/plus4.png` |
 
-### c. Kartu wild (2 file)
-`wild.png` (ganti warna), `wild4.png` (+4).
-
-**Total muka kartu = 54 file.** (Kartu kembar pakai gambar yang sama, jadi cukup 54.)
+**Total muka kartu = 4 × 13 + 2 = 54 file.** (Kartu kembar pakai gambar sama.)
 
 ---
 
-## 2. Punggung kartu → `public/assets/cards/back.png`
-Satu file, ukuran sama kayak kartu (300 × 450). Dipakai buat deck & kartu lawan.
-
-## 3. Background meja → `public/assets/table.png`
-Rasio **16 : 10** (mendatar). Rekomendasi **1600 × 1000 px** (boleh PNG/JPG).
-
-## 4. Avatar default (opsional) → `public/assets/avatar.png`
-Kotak **96 × 96 px**. Dipakai kalau pemain nggak punya foto. (Sekarang: huruf awal nama.)
-
-## 5. Panah arah putaran (opsional) → `public/assets/arrow.png`
-Transparan. Sekarang pakai simbol ↻ CSS — boleh diganti kalau mau lebih bagus.
+## Aset lain (opsional, di `public/assets/`)
+| Aset | Path | Ukuran |
+|---|---|---|
+| Punggung kartu | `public/assets/cards/back.png` | 300 × 450 |
+| Background meja | `public/assets/table.png` | 1600 × 1000 (16:10) |
+| Avatar default | `public/assets/avatar.png` | 96 × 96 |
 
 ---
 
-## Checklist cepat
-- [ ] 40 kartu angka (`<warna>_0..9.png`)
-- [ ] 12 kartu aksi (`<warna>_skip/reverse/draw2.png`)
-- [ ] 2 kartu wild (`wild.png`, `wild4.png`)
-- [ ] `back.png`
-- [ ] `table.png`
-- [ ] `avatar.png` (opsional)
-- [ ] `arrow.png` (opsional)
+## Checklist
+- [ ] `red/` : `0..9.png`, `skip.png`, `reverse.png`, `plus2.png` (13)
+- [ ] `yellow/` : idem (13)
+- [ ] `green/` : idem (13)
+- [ ] `blue/` : idem (13)
+- [ ] `wild/` : `wild.png`, `plus4.png` (2)
+- [ ] `cards/back.png`
+- [ ] `assets/table.png` (opsional)
+- [ ] `assets/avatar.png` (opsional)
 
-Kalau udah ada minimal muka kartu + `back.png`, itu udah cukup buat mulai keliatan asli.
-Bilang aja "aset udah masuk" → langsung di-wire.
+Kalau minimal muka kartu + `back.png` udah ada, itu cukup buat mulai keliatan asli.
+Bilang "aset udah masuk" → langsung gua wire.
