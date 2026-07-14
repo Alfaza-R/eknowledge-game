@@ -372,14 +372,15 @@ function renderLudo(view) {
 const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4" };
 const COLOR_ID = { red: "Merah", yellow: "Kuning", green: "Hijau", blue: "Biru" };
 
-// Warna yang PNG kartunya UDAH ada (tambahin pas warna baru dimasukin).
-const ASSET_COLORS = new Set(["red", "yellow"]);
+// Warna yang PNG kartunya udah ada.
+const ASSET_COLORS = new Set(["red", "yellow", "green", "blue"]);
 // Prefix nama file per warna sesuai file user: m=merah, k=kuning, h=hijau, b=biru.
 const COLOR_PREFIX = { red: "m", yellow: "k", green: "h", blue: "b" };
 
 // URL gambar kartu, atau null kalau belum ada asetnya (→ pakai placeholder).
 function cardImageUrl(card) {
-  if (card.kind === "wild" || card.kind === "wild4") return null; // aset wild belum ada
+  if (card.kind === "wild") return "assets/cards/wild/" + encodeURIComponent("wild normal") + ".png";
+  if (card.kind === "wild4") return "assets/cards/wild/" + encodeURIComponent("w +4") + ".png";
   if (!ASSET_COLORS.has(card.color)) return null;
   const p = COLOR_PREFIX[card.color];
   const v =

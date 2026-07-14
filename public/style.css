@@ -244,11 +244,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* punggung kartu (placeholder — ganti dengan background-image PNG nanti) */
 .uno-back {
   width: 48px; aspect-ratio: 826 / 1299; border-radius: 10px; flex: 0 0 auto; position: relative;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  overflow: hidden;
   background:
-    radial-gradient(ellipse 62% 40% at 50% 50%, #fff 0 38%, transparent 40%),
+    url("assets/cards/backfrop%20card.png") center/cover no-repeat,
     linear-gradient(150deg, #e4483b, #a3201c);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.18);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
   display: flex; align-items: center; justify-content: center;
 }
 .uno-back.deck { width: 76px; cursor: default; }
@@ -262,10 +262,9 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* kartu terbang pas cangkul (draw) */
 .fly-card {
-  position: fixed; z-index: 80; pointer-events: none; border-radius: 11px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  position: fixed; z-index: 80; pointer-events: none; border-radius: 11px; overflow: hidden;
   background:
-    radial-gradient(ellipse 62% 40% at 50% 50%, #fff 0 38%, transparent 40%),
+    url("assets/cards/backfrop%20card.png") center/cover no-repeat,
     linear-gradient(150deg, #e4483b, #a3201c);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
   transition: transform 0.58s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.58s ease;
