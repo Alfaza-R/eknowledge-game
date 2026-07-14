@@ -205,7 +205,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-piles { display: flex; align-items: center; gap: 1.9rem; }
 
 /* deck numpuk rapi (bukan berantakan) */
-.uno-deck-stack { position: relative; width: 76px; aspect-ratio: 826 / 1299; flex: 0 0 auto; transition: transform 0.12s ease; }
+.uno-deck-stack { position: relative; width: calc(var(--cw, 66px) * 1.15); aspect-ratio: 826 / 1299; flex: 0 0 auto; transition: transform 0.12s ease; }
 .uno-deck-stack .uno-back.deck {
   position: absolute; inset: 0; width: 100%; height: 100%;
   transform: translate(calc(var(--i) * 3px), calc(var(--i) * 3px));
@@ -223,7 +223,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* kartu (muka) */
 .uno-card {
-  width: 66px; aspect-ratio: 826 / 1299; border-radius: 0; flex: 0 0 auto; position: relative;
+  width: var(--cw, 66px); aspect-ratio: 826 / 1299; border-radius: 0; flex: 0 0 auto; position: relative;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.7rem; font-weight: 800; color: #fff; user-select: none;
   border: 2px solid rgba(255, 255, 255, 0.9);
@@ -240,17 +240,17 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.green { background: var(--uno-green); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
-.uno-card.discard { width: 90px; font-size: 2.3rem; }
+.uno-card.discard { width: calc(var(--cw, 66px) * 1.35); font-size: 2.3rem; }
 
 /* tumpukan buangan tengah: kartu-kartu tercecer */
-.uno-discard-stack { position: relative; width: 90px; aspect-ratio: 826 / 1299; }
+.uno-discard-stack { position: relative; width: calc(var(--cw, 66px) * 1.35); aspect-ratio: 826 / 1299; }
 .uno-discard-stack .uno-card.discard {
   position: absolute; inset: 0; width: 100%; height: 100%;
   transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg));
 }
 .uno-discard-stack .uno-card.discard.played { animation: slamSpin 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
 @keyframes slamSpin {
-  0% { transform: translate(var(--dx, 0), calc(var(--dy, 0) - 52px)) rotate(calc(var(--spin, 0deg) - 14deg)) scale(1.3); opacity: 0; }
+  0% { transform: translate(var(--dx, 0), calc(var(--dy, 0) - var(--cw, 66px) * 0.7)) rotate(calc(var(--spin, 0deg) - 14deg)) scale(1.3); opacity: 0; }
   60% { opacity: 1; }
   100% { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg)); opacity: 1; }
 }
@@ -283,7 +283,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 }
 .uno-back.deck.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; }
 .uno-back.deck.playable:hover { transform: translateY(-4px); }
-.uno-back.mini { width: 34px; border-width: 1.5px; margin: 0; transform-origin: bottom center; }
+.uno-back.mini { width: calc(var(--cw, 66px) * 0.52); border-width: 1.5px; margin: 0; transform-origin: bottom center; }
 
 /* kartu terbang pas cangkul (draw) */
 .fly-card {
@@ -322,34 +322,34 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-badge { color: var(--danger); font-weight: 800; font-size: 0.68rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
 @keyframes unoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
 
-/* tangan kamu (kipas bawah) */
+/* tangan kamu (kipas bawah) — jarak angkat proporsional ke ukuran kartu (--cw) */
 .uno-hand-fan {
   position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%);
-  display: flex; align-items: flex-end; z-index: 5; padding-top: 96px;
+  display: flex; align-items: flex-end; z-index: 5; padding-top: calc(var(--cw, 66px) * 1.45);
 }
 /* SLOT stabil = target hover; posisinya diam biar kartu naik tanpa geter */
 .uno-hand-fan .hand-slot {
-  margin: 0 -8px; position: relative; transform-origin: bottom center;
+  margin: 0 calc(var(--cw, 66px) * -0.12); position: relative; transform-origin: bottom center;
   transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px));
 }
 .uno-hand-fan .hand-slot .uno-card { transition: transform 0.14s ease; }
 /* kartu yang BISA dimainkan naik dikit biar gampang dikenali */
-.uno-hand-fan .hand-slot .uno-card.playable { cursor: pointer; transform: translateY(-28px); }
+.uno-hand-fan .hand-slot .uno-card.playable { cursor: pointer; transform: translateY(calc(var(--cw, 66px) * -0.42)); }
 /* HOVER pada slot (bukan kartu) → kartu naik & diluruskan, tapi area hover tetap */
 .uno-hand-fan .hand-slot:hover { z-index: 30; }
 .uno-hand-fan .hand-slot:hover .uno-card {
-  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(-74px) scale(1.18);
+  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(calc(var(--cw, 66px) * -1.1)) scale(1.18);
 }
 /* kartu terpilih buat stack */
 .uno-hand-fan .hand-slot.selected { z-index: 26; }
 .uno-hand-fan .hand-slot.selected .uno-card {
-  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(-60px) scale(1.1);
+  transform: rotate(calc(-1 * var(--ang, 0deg))) translateY(calc(var(--cw, 66px) * -0.9)) scale(1.1);
   outline: 3px solid var(--accent);
 }
 .uno-hand-fan .hand-slot.dimmed { opacity: 0.35; filter: grayscale(0.5); }
 .uno-hand-fan .hand-slot.deal { animation: dealFan 0.42s ease backwards; }
 @keyframes dealFan {
-  from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + 54px)); opacity: 0; }
+  from { transform: rotate(var(--ang, 0deg)) translateY(calc(var(--lift, 0px) + var(--cw, 66px) * 0.8)); opacity: 0; }
   to   { transform: rotate(var(--ang, 0deg)) translateY(var(--lift, 0px)); opacity: 1; }
 }
 
@@ -540,6 +540,22 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
     background: radial-gradient(1000px 500px at 50% -10%, #1c2536, transparent 60%), var(--bg);
   }
   body.in-table-game #rotate-prompt p { color: var(--fg); font-size: 1.15rem; max-width: 300px; line-height: 1.5; }
+}
+
+/* HP landscape (layar pendek): perkecil info lawan, warna, & kontrol */
+@media (max-height: 520px) {
+  .uno-avatar { width: 26px; height: 26px; font-size: 0.72rem; border-radius: 7px; }
+  .seat-info { padding: 2px 5px; gap: 4px; border-radius: 8px; }
+  .seat-name { font-size: 0.62rem; max-width: 60px; }
+  .seat-count { font-size: 0.6rem; }
+  .uno-seat { width: 84px; gap: 2px; }
+  .seat-fan { height: 40px; }
+  .uno-color { font-size: 0.7rem; }
+  .uno-color span { width: 10px; height: 10px; }
+  .uno-bar { margin-top: 0.3rem; gap: 0.6rem; min-height: 1.4rem; }
+  .uno-turn, .uno-last { font-size: 0.78rem; }
+  .pass-btn { padding: 0.35rem 0.9rem; font-size: 0.82rem; }
+  .uno-pending { font-size: 0.72rem; padding: 3px 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

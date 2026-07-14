@@ -505,6 +505,9 @@ function renderUno(view) {
   // ===== MEJA =====
   const table = document.createElement("div");
   table.className = "uno-table";
+  // ukuran kartu nyesuain layar: kecil di HP landscape, gede di desktop
+  const cw = Math.max(28, Math.min(66, Math.round(Math.min(window.innerHeight * 0.11, window.innerWidth * 0.08))));
+  table.style.setProperty("--cw", cw + "px");
 
   // arah putaran (placeholder)
   const dir = document.createElement("div");
@@ -573,7 +576,7 @@ function renderUno(view) {
     fan.className = "seat-fan";
     if (!o.done) {
       const count = Math.min(o.count, 25); // batas aman DOM
-      const cardW = 34, areaW = 118;
+      const cardW = Math.round(cw * 0.52), areaW = Math.round(cw * 1.9);
       const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
       const arc = Math.min(58, count * 6); // total derajat kipas
       for (let i = 0; i < count; i++) {
@@ -919,6 +922,17 @@ socket.on("disconnect", () => {
   // koneksi putus — kasih tau di layar game kalau lagi main
   const t = document.querySelector("#screen-game .turn");
   if (t) t.textContent = "Koneksi terputus, nyambungin lagi…";
+});
+
+// pas layar diputar/resize, hitung ulang ukuran kartu (Uno)
+let resizeT;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => {
+    if (lastUnoView && screens.game.classList.contains("uno-mode") && !screens.game.classList.contains("hidden")) {
+      renderUno(lastUnoView);
+    }
+  }, 150);
 });
 
 // ===========================================================================
