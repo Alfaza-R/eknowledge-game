@@ -25,6 +25,8 @@ const io = new Server(server);
 
 const GRACE_MS = 30_000; // grace period 30 detik sebelum pemain dianggap keluar beneran
 const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau reconnect
+const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
+const turnTimers = new Map(); // roomId -> timeout
 
 // ---------------------------------------------------------------------------
 // Bikin VIEW yang dikirim ke satu pemain. Tiap pemain bisa beda view-nya
@@ -52,6 +54,7 @@ function viewFor(room, playerId) {
     const turnPlayer = room.players.find((p) => p.id === turnId);
     view.currentTurnName = turnPlayer ? turnPlayer.name : null;
     view.isMyTurn = turnId === playerId;
+    if (room.status === "playing") view.turnDeadline = room.turnDeadline || null;
   }
 
   if (room.status === "finished") {
@@ -72,6 +75,31 @@ function broadcastRoom(room) {
   for (const p of room.players) {
     if (p.connected) io.to(p.id).emit("state", viewFor(room, p.id));
   }
+}
+
+// ---- Timer giliran (auto-skip 60 detik) ----
+function clearTurnTimer(roomId) {
+  const t = turnTimers.get(roomId);
+  if (t) { clearTimeout(t); turnTimers.delete(roomId); }
+}
+
+function scheduleTurnTimer(room) {
+  clearTurnTimer(room.id);
+  const game = games[room.gameType];
+  if (!room || room.status !== "playing" || !game.forceSkip) {
+    room && (room.turnDeadline = null);
+    return;
+  }
+  room.turnDeadline = Date.now() + TURN_MS;
+  turnTimers.set(room.id, setTimeout(() => {
+    const r = roomStore.getRoom(room.id);
+    if (!r || r.status !== "playing") return;
+    r.state = game.forceSkip(r.state);          // pemain kehabisan waktu → tarik & skip
+    const end = game.checkEnd(r.state);
+    if (end !== null) { r.status = "finished"; r.result = end; }
+    if (r.status === "playing") scheduleTurnTimer(r); else clearTurnTimer(r.id);
+    broadcastRoom(r);
+  }, TURN_MS));
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +144,7 @@ io.on("connection", (socket) => {
 
     room.state = game.init(room.players);
     room.status = "playing";
+    scheduleTurnTimer(room); // set deadline dulu biar keikut di view
     broadcastRoom(room);
   });
 
@@ -135,6 +164,8 @@ io.on("connection", (socket) => {
       room.status = "finished";
       room.result = end; // playerId pemenang | "draw"
     }
+    if (room.status === "playing") scheduleTurnTimer(room);
+    else clearTurnTimer(room.id);
     broadcastRoom(room);
   });
 
@@ -143,9 +174,11 @@ io.on("connection", (socket) => {
     const room = roomStore.getRoom(roomId);
     if (!room || room.hostId !== socket.id) return;
     if (room.status !== "finished") return;
+    clearTurnTimer(room.id);
     room.status = "lobby";
     room.state = null;
     room.result = null;
+    room.turnDeadline = null;
     broadcastRoom(room);
   });
 
@@ -178,6 +211,7 @@ function finalizeLeave(roomId, socketId) {
 
   // semua keluar → hapus room biar gak jadi zombie di memori
   if (room.players.length === 0) {
+    clearTurnTimer(roomId);
     roomStore.removeRoom(roomId);
     return;
   }
@@ -207,6 +241,8 @@ function finalizeLeave(roomId, socketId) {
     }
   }
 
+  if (room.status === "playing") scheduleTurnTimer(room);
+  else clearTurnTimer(roomId);
   broadcastRoom(room);
 }
 

@@ -29,6 +29,22 @@ let celebrated = false;
 let lastUnoView = null;
 let unoSel = [];
 let prevEventId = 0; // buat trigger animasi cangkul cuma sekali per event
+let unoTimerInterval = null; // countdown giliran 60 detik
+
+function stopUnoTimer() { if (unoTimerInterval) { clearInterval(unoTimerInterval); unoTimerInterval = null; } }
+function startUnoTimer(deadline) {
+  stopUnoTimer();
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    document.querySelectorAll(".uno-timer").forEach((el) => {
+      el.textContent = "⏱ " + left + "s";
+      el.classList.toggle("low", left <= 10);
+    });
+    if (left <= 0) stopUnoTimer();
+  };
+  tick();
+  unoTimerInterval = setInterval(tick, 500);
+}
 
 const $ = (id) => document.getElementById(id);
 const screens = {
@@ -46,6 +62,7 @@ function show(name) {
     $("game-root").classList.remove("wide");
     screens.game.classList.remove("uno-mode");
     document.body.classList.remove("in-table-game");
+    stopUnoTimer();
   }
 }
 function myName() {
@@ -472,7 +489,7 @@ function unoBackEl(extra = "") {
 
 // posisi kursi lawan: disebar di busur atas meja, kiri → kanan
 function seatPositions(k) {
-  const cx = 50, cy = 44, rx = 46, ry = 42;
+  const cx = 50, cy = 38, rx = 47, ry = 40;
   const out = [];
   for (let i = 0; i < k; i++) {
     const t = Math.PI - ((i + 1) * Math.PI) / (k + 1); // 180°..0°
@@ -695,6 +712,11 @@ function renderUno(view) {
   tSpan.className = "uno-turn" + (myTurn ? " my-turn" : "");
   tSpan.textContent = playing ? (view.isMyTurn ? "Giliran kamu" : `Giliran ${view.currentTurnName}…`) : "";
   bar.appendChild(tSpan);
+  if (playing && view.turnDeadline) {
+    const timer = document.createElement("span");
+    timer.className = "uno-timer";
+    bar.appendChild(timer);
+  }
   if (g.lastAction) {
     const la = document.createElement("span");
     la.className = "uno-last";
@@ -702,6 +724,10 @@ function renderUno(view) {
     bar.appendChild(la);
   }
   root.appendChild(bar);
+
+  // jalanin/hentikan countdown
+  if (playing && view.turnDeadline) startUnoTimer(view.turnDeadline);
+  else stopUnoTimer();
 
   // ===== KONTROL: mainkan / batal / tarik / lewati =====
   const controls = document.createElement("div");

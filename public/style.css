@@ -197,10 +197,16 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-dir.ccw { animation-direction: reverse; }
 @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-/* pusat: deck + buangan + warna */
+/* pusat: deck + buangan + warna — z-index tinggi biar gak ketutup kursi lawan */
 .uno-play {
   position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
+  z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
+}
+/* halo gelap di belakang tumpukan tengah biar nonjol dari meja yang rame */
+.uno-play::before {
+  content: ""; position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  width: 190%; height: 150%; border-radius: 50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse, rgba(8, 11, 18, 0.6) 0 50%, transparent 72%);
 }
 .uno-piles { display: flex; align-items: center; gap: 1.9rem; }
 
@@ -299,7 +305,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-seat {
   position: absolute; transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  z-index: 3; width: 120px;
+  z-index: 3; width: 120px; transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; }
 .seat-info {
@@ -317,8 +323,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .seat-meta { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .seat-name { font-size: 0.8rem; font-weight: 700; max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seat-count { font-size: 0.75rem; color: var(--muted); }
-.uno-seat.turn .seat-info { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(91, 147, 255, 0.4); }
+/* pemain yang lagi giliran: kursinya (avatar+nama) jadi gede & paling depan */
+.uno-seat.turn { transform: translate(-50%, -50%) scale(1.28); z-index: 7; }
+.uno-seat.turn .seat-info { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(91, 147, 255, 0.45); }
 .uno-seat.turn .uno-avatar { box-shadow: 0 0 0 2px var(--accent); }
+.uno-seat.turn .seat-name { color: var(--accent); }
 .uno-badge { color: var(--danger); font-weight: 800; font-size: 0.68rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
 @keyframes unoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
 
@@ -359,6 +368,12 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   margin-top: 0.8rem; flex-wrap: wrap; min-height: 2rem;
 }
 .uno-turn { font-weight: 700; }
+.uno-timer {
+  font-weight: 800; font-size: 0.9rem; color: var(--fg);
+  background: rgba(91, 147, 255, 0.18); border: 1px solid var(--accent);
+  padding: 2px 10px; border-radius: 999px;
+}
+.uno-timer.low { color: #fff; background: var(--danger); border-color: var(--danger); animation: unoPulse 0.8s ease-in-out infinite; }
 .uno-last { color: var(--muted); font-size: 0.85rem; }
 .pass-btn { width: auto; padding: 0.5rem 1.3rem; margin: 0; }
 .uno-controls { display: flex; gap: 0.6rem; justify-content: center; margin-top: 0.5rem; flex-wrap: wrap; }

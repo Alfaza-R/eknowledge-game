@@ -308,6 +308,28 @@ module.exports = {
     return state.over ? state.loser || "over" : null;
   },
 
+  // dipanggil server pas pemain kehabisan waktu (60 detik) → tarik & skip
+  forceSkip(state) {
+    const s = structuredClone(state);
+    if (s.over) return s;
+    const pid = s.order[s.currentTurn];
+    if (s.pendingDraw > 0) {
+      s.hands[pid].push(...drawCards(s, s.pendingDraw));
+      s.lastAction = `${s.names[pid]} kehabisan waktu — tarik ${s.pendingDraw}`;
+      s.pendingDraw = 0;
+    } else {
+      const [card] = drawCards(s, 1);
+      if (card) s.hands[pid].push(card);
+      s.lastAction = `${s.names[pid]} kehabisan waktu — tarik 1 & di-skip`;
+    }
+    s.drawnThisTurn = false;
+    s.eventId = (s.eventId || 0) + 1;
+    s.lastEvent = { id: s.eventId, type: "draw", by: pid, n: 1 };
+    maybeRecycle(s);
+    advance(s, 1);
+    return s;
+  },
+
   removePlayer(state, playerId) {
     const s = structuredClone(state);
     const idx = s.order.indexOf(playerId);
