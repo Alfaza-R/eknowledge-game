@@ -180,10 +180,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   margin: 0 auto;
   border-radius: 26px;
   background:
+    url("assets/cards/meja.png") center/cover no-repeat,
     radial-gradient(ellipse 56% 50% at 50% 46%, #3b4570 0%, #263056 45%, transparent 72%),
     radial-gradient(ellipse at 50% 50%, #1b2138, #10152a);
   border: 1px solid var(--line);
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.55), var(--shadow);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5), var(--shadow);
 }
 
 /* arah putaran (placeholder — nanti bisa diganti aset PNG panah) */
@@ -290,6 +291,16 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-back.deck.playable { cursor: pointer; outline: 2px solid var(--ok); outline-offset: 2px; }
 .uno-back.deck.playable:hover { transform: translateY(-4px); }
 .uno-back.mini { width: calc(var(--cw, 66px) * 0.52); border-width: 1.5px; margin: 0; transform-origin: bottom center; }
+/* kartu lawan yang keliatan pas spill */
+.uno-card.reveal-mini { width: calc(var(--cw, 66px) * 0.52); border-width: 1.5px; transform-origin: bottom center; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+
+/* banner spill */
+.uno-spill-banner {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 20;
+  background: linear-gradient(135deg, #7a3ff0, #5b93ff); color: #fff; font-weight: 800;
+  font-size: 0.85rem; padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); animation: unoPulse 1s ease-in-out infinite;
+}
 
 /* kartu terbang pas cangkul (draw) */
 .fly-card {

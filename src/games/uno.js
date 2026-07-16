@@ -28,7 +28,8 @@ function buildDeck() {
       deck.push({ kind: "num", color, value: v });
       deck.push({ kind: "num", color, value: v });
     }
-    for (const kind of ["skip", "reverse", "draw2"]) {
+    // 2 tiap: skip, reverse, +2, dan SPILL (kartu spill: 2/warna = 8 total)
+    for (const kind of ["skip", "reverse", "draw2", "spill"]) {
       deck.push({ kind, color });
       deck.push({ kind, color });
     }
@@ -37,7 +38,8 @@ function buildDeck() {
     deck.push({ kind: "wild" });
     deck.push({ kind: "wild4" });
   }
-  return deck; // 108
+  for (let i = 0; i < 2; i++) deck.push({ kind: "wild8" }); // wild +8 (2 biji)
+  return deck; // 118
 }
 
 function shuffle(arr) {
@@ -49,7 +51,8 @@ function shuffle(arr) {
   return a;
 }
 
-function isPlus(card) { return card.kind === "draw2" || card.kind === "wild4"; }
+function isPlus(card) { return card.kind === "draw2" || card.kind === "wild4" || card.kind === "wild8"; }
+function isWildKind(card) { return card.kind === "wild" || card.kind === "wild4" || card.kind === "wild8"; }
 
 // "ikon" kartu — buat nentuin kartu mana yang boleh di-stack bareng.
 //  angka  → "num:<value>"
@@ -65,7 +68,7 @@ function cardGroup(card) {
 
 // Boleh nggak `card` jadi kartu PALING BAWAH di atas `top` (warna aktif `currentColor`)?
 function matches(card, top, currentColor) {
-  if (card.kind === "wild" || card.kind === "wild4") return true;
+  if (isWildKind(card)) return true;
   if (card.color === currentColor) return true;
   if (card.kind === "num" && top.kind === "num" && card.value === top.value) return true;
   if (card.kind !== "num" && card.kind === top.kind) return true;
@@ -117,8 +120,10 @@ function describe(card) {
   if (card.kind === "skip") return `skip ${c}`.trim();
   if (card.kind === "reverse") return `reverse ${c}`.trim();
   if (card.kind === "draw2") return `+2 ${c}`.trim();
+  if (card.kind === "spill") return `spill ${c}`.trim();
   if (card.kind === "wild") return `wild ${c}`.trim();
   if (card.kind === "wild4") return `+4 ${c}`.trim();
+  if (card.kind === "wild8") return `+8 ${c}`.trim();
   return "kartu";
 }
 
@@ -147,6 +152,7 @@ module.exports = {
       direction: 1,
       drawnThisTurn: false,
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
+      spillUntil: 0,  // timestamp: sampai kapan semua kartu ke-spill (spill card)
       winner: null,   // juara pertama (kartu habis duluan)
       finished: [],   // urutan pemain yang udah habis kartunya (ranking juara)
       over: false,    // game beneran selesai (tersisa ≤1 pemain aktif)
@@ -176,7 +182,7 @@ module.exports = {
       if (cards.some((c) => !c)) return false;
       if (!cards.every(isPlus)) return false; // wajib plus semua
       const topCard = cards[cards.length - 1];
-      if (topCard.kind === "wild4" && !COLORS.includes(move.chosenColor)) return false;
+      if ((topCard.kind === "wild4" || topCard.kind === "wild8") && !COLORS.includes(move.chosenColor)) return false;
       return true;
     }
 
@@ -196,7 +202,7 @@ module.exports = {
     if (!matches(cards[0], top, state.currentColor)) return false; // bawah harus sah
 
     const topCard = cards[cards.length - 1];
-    if ((topCard.kind === "wild" || topCard.kind === "wild4") && !COLORS.includes(move.chosenColor)) return false;
+    if (isWildKind(topCard) && !COLORS.includes(move.chosenColor)) return false;
     return true;
   },
 
@@ -239,7 +245,7 @@ module.exports = {
     const idxs = move.cardIndexes.slice();
     const cards = idxs.map((i) => s.hands[pid][i]); // referensi objek di tangan (clone)
     const topCard = cards[cards.length - 1];
-    if (topCard.kind === "wild" || topCard.kind === "wild4") topCard.color = move.chosenColor;
+    if (isWildKind(topCard)) topCard.color = move.chosenColor;
 
     // buang dari tangan (index besar dulu biar aman)
     for (const i of idxs.slice().sort((a, b) => b - a)) s.hands[pid].splice(i, 1);
@@ -284,7 +290,7 @@ module.exports = {
 
     // efek kartu (advance otomatis skip yang udah selesai)
     if (group === "plus") {
-      const add = cards.reduce((sum, c) => sum + (c.kind === "wild4" ? 4 : 2), 0);
+      const add = cards.reduce((sum, c) => sum + (c.kind === "wild8" ? 8 : c.kind === "wild4" ? 4 : 2), 0);
       s.pendingDraw += add;
       desc += ` — tarik gantung ${s.pendingDraw}`;
       advance(s, 1);
@@ -295,6 +301,10 @@ module.exports = {
       if (cards.length % 2 === 1) s.direction *= -1;
       advance(s, active.length === 2 && cards.length % 2 === 1 ? 2 : 1);
       desc += " — arah dibalik";
+    } else if (group === "act:spill") {
+      s.spillUntil = Date.now() + 10000; // semua kartu keliatan 10 detik
+      desc += " — 👀 SEMUA kartu ke-spill 10 detik!";
+      advance(s, 1);
     } else {
       advance(s, 1); // angka / wild biasa
     }
@@ -356,6 +366,7 @@ module.exports = {
     const hand = state.hands[playerId] || [];
     const meIsCurrent = state.order[state.currentTurn] === playerId;
     const pending = state.pendingDraw;
+    const spillActive = !!(state.spillUntil && Date.now() < state.spillUntil);
 
     // grup mana yang punya ≥1 kartu yang sah jadi kartu bawah → semua kartu grup itu "playable"
     const groupCanStart = {};
@@ -382,6 +393,8 @@ module.exports = {
           count: state.hands[id].length,
           isTurn: state.order[state.currentTurn] === id,
           done: state.finished.includes(id),
+          // pas spill aktif, kartu lawan keliatan (cuma data tampilan)
+          revealHand: spillActive ? state.hands[id].map((c) => ({ kind: c.kind, color: c.color, value: c.value })) : null,
         })),
       topCard: top,
       recentDiscard: state.discardPile.slice(-5), // 2–5 kartu terakhir buat tumpukan berantakan
@@ -393,6 +406,8 @@ module.exports = {
       pendingDraw: pending,
       mustRespondPlus: meIsCurrent && pending > 0, // giliranku & ada tumpukan plus
       youId: playerId,
+      spillActive,
+      spillUntil: spillActive ? state.spillUntil : null,
       lastEvent: state.lastEvent,
       unoNames: state.order
         .filter((id) => state.hands[id] && state.hands[id].length === 1)

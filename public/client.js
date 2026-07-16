@@ -407,7 +407,7 @@ function renderLudo(view) {
 // ---------------------------------------------------------------------------
 // RENDER: UNO
 // ---------------------------------------------------------------------------
-const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4" };
+const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4", wild8: "+8", spill: "👀" };
 const COLOR_ID = { red: "Merah", yellow: "Kuning", green: "Hijau", blue: "Biru" };
 const DIR_COLOR = {
   red: "rgba(228,72,59,0.42)", yellow: "rgba(242,180,0,0.48)",
@@ -421,8 +421,10 @@ function cardRank(card) {
   if (card.kind === "skip") return [1, 0, color];
   if (card.kind === "reverse") return [1, 1, color];
   if (card.kind === "draw2") return [1, 2, color];
+  if (card.kind === "spill") return [1, 3, color];
   if (card.kind === "wild") return [2, 0, 0];
   if (card.kind === "wild4") return [2, 1, 0];
+  if (card.kind === "wild8") return [2, 2, 0];
   return [3, 0, 0];
 }
 function cmpCard(a, b) {
@@ -440,13 +442,15 @@ const COLOR_PREFIX = { red: "m", yellow: "k", green: "h", blue: "b" };
 function cardImageUrl(card) {
   if (card.kind === "wild") return "assets/cards/wild/" + encodeURIComponent("wild normal") + ".png";
   if (card.kind === "wild4") return "assets/cards/wild/" + encodeURIComponent("w +4") + ".png";
+  if (card.kind === "wild8") return "assets/cards/wild/" + encodeURIComponent("w +8") + ".png";
   if (!ASSET_COLORS.has(card.color)) return null;
   const p = COLOR_PREFIX[card.color];
   const v =
     card.kind === "num" ? String(card.value) :
     card.kind === "draw2" ? "+2" :
     card.kind === "skip" ? "skip" :
-    card.kind === "reverse" ? "reverse" : null;
+    card.kind === "reverse" ? "reverse" :
+    card.kind === "spill" ? "spill" : null;
   if (v === null) return null;
   // nama file ada spasi & "+", jadi di-encode
   return "assets/cards/" + card.color + "/" + encodeURIComponent(p + " " + v) + ".png";
@@ -526,6 +530,14 @@ function renderUno(view) {
   const cw = Math.max(28, Math.min(66, Math.round(Math.min(window.innerHeight * 0.11, window.innerWidth * 0.08))));
   table.style.setProperty("--cw", cw + "px");
 
+  // banner pas kartu SPILL aktif (semua kartu keliatan)
+  if (g.spillActive) {
+    const sb = document.createElement("div");
+    sb.className = "uno-spill-banner";
+    sb.textContent = "👀 SPILL! Semua kartu keliatan";
+    table.appendChild(sb);
+  }
+
   // arah putaran (placeholder)
   const dir = document.createElement("div");
   dir.className = "uno-dir " + (g.direction === 1 ? "cw" : "ccw");
@@ -591,21 +603,24 @@ function renderUno(view) {
     // kipas punggung = jumlah kartu asli lawan (kalau udah selesai, gak usah)
     const fan = document.createElement("div");
     fan.className = "seat-fan";
-    if (!o.done) {
-      const count = Math.min(o.count, 25); // batas aman DOM
-      const cardW = Math.round(cw * 0.52), areaW = Math.round(cw * 1.9);
-      const step = count > 1 ? Math.min(cardW - 5, (areaW - cardW) / (count - 1)) : 0;
-      const arc = Math.min(58, count * 6); // total derajat kipas
-      for (let i = 0; i < count; i++) {
-        const b = unoBackEl("mini");
-        const ang = count > 1 ? (i - (count - 1) / 2) * (arc / (count - 1)) : 0;
-        if (i > 0) b.style.marginLeft = step - cardW + "px";
-        b.style.transform = `rotate(${ang}deg) translateY(${Math.abs(ang) * 0.3}px)`;
-        b.style.zIndex = i;
-        fan.appendChild(b);
-      }
-    } else {
+    if (o.done) {
       fan.innerHTML = '<span class="seat-medal">✅</span>';
+    } else {
+      // pas spill aktif → kartu lawan keliatan (face-up), selain itu punggung
+      const revealed = o.revealHand ? o.revealHand.slice(0, 20) : null;
+      const shown = revealed ? revealed.length : Math.min(o.count, 25);
+      const cardW = Math.round(cw * 0.52), areaW = Math.round(cw * 1.9);
+      const step = shown > 1 ? Math.min(cardW - 5, (areaW - cardW) / (shown - 1)) : 0;
+      const arc = Math.min(58, shown * 6);
+      for (let i = 0; i < shown; i++) {
+        const el = revealed ? unoCardEl(revealed[i], {}) : unoBackEl("mini");
+        if (revealed) el.classList.add("reveal-mini");
+        const ang = shown > 1 ? (i - (shown - 1) / 2) * (arc / (shown - 1)) : 0;
+        if (i > 0) el.style.marginLeft = step - cardW + "px";
+        el.style.transform = `rotate(${ang}deg) translateY(${Math.abs(ang) * 0.3}px)`;
+        el.style.zIndex = i;
+        fan.appendChild(el);
+      }
     }
     seat.appendChild(fan);
 
@@ -899,7 +914,7 @@ function playCards(indexes, topCard) {
     socket.emit("playMove", { roomId: currentRoom, move });
     unoSel = [];
   };
-  if (topCard.kind === "wild" || topCard.kind === "wild4") showColorPicker(send);
+  if (topCard.kind === "wild" || topCard.kind === "wild4" || topCard.kind === "wild8") showColorPicker(send);
   else send();
 }
 

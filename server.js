@@ -27,6 +27,7 @@ const GRACE_MS = 30_000; // grace period 30 detik sebelum pemain dianggap keluar
 const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau reconnect
 const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
 const turnTimers = new Map(); // roomId -> timeout
+const spillTimers = new Map(); // roomId -> timeout (re-broadcast pas spill kelar)
 
 // ---------------------------------------------------------------------------
 // Bikin VIEW yang dikirim ke satu pemain. Tiap pemain bisa beda view-nya
@@ -81,6 +82,19 @@ function broadcastRoom(room) {
 function clearTurnTimer(roomId) {
   const t = turnTimers.get(roomId);
   if (t) { clearTimeout(t); turnTimers.delete(roomId); }
+}
+
+// pas ada kartu spill dimainin, re-broadcast pas 10 detiknya kelar biar kartu ke-hide lagi
+function scheduleSpillEnd(room) {
+  const prev = spillTimers.get(room.id);
+  if (prev) clearTimeout(prev);
+  const until = room.state && room.state.spillUntil;
+  if (!until || until <= Date.now()) return;
+  spillTimers.set(room.id, setTimeout(() => {
+    spillTimers.delete(room.id);
+    const r = roomStore.getRoom(room.id);
+    if (r) broadcastRoom(r);
+  }, until - Date.now() + 60));
 }
 
 function scheduleTurnTimer(room) {
@@ -166,6 +180,7 @@ io.on("connection", (socket) => {
     }
     if (room.status === "playing") scheduleTurnTimer(room);
     else clearTurnTimer(room.id);
+    scheduleSpillEnd(room);
     broadcastRoom(room);
   });
 
