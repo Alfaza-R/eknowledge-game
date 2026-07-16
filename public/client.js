@@ -523,19 +523,22 @@ function renderUno(view) {
   const inSelection = unoSel.length > 0;
   const selGroup = inSelection ? g.myHand[unoSel[0]].group : null;
 
-  // ===== MEJA =====
+  // ===== MEJA (panggung 3D: stage kasih perspektif, table dimiringin) =====
+  const stage = document.createElement("div");
+  stage.className = "uno-stage";
   const table = document.createElement("div");
   table.className = "uno-table";
+  stage.appendChild(table);
   // ukuran kartu nyesuain layar: kecil di HP landscape, gede di desktop
   const cw = Math.max(28, Math.min(66, Math.round(Math.min(window.innerHeight * 0.11, window.innerWidth * 0.08))));
-  table.style.setProperty("--cw", cw + "px");
+  stage.style.setProperty("--cw", cw + "px"); // di stage biar tangan (sibling table) ikut kebagian
 
   // banner pas kartu SPILL aktif (semua kartu keliatan)
   if (g.spillActive) {
     const sb = document.createElement("div");
     sb.className = "uno-spill-banner";
     sb.textContent = "👀 SPILL! Semua kartu keliatan";
-    table.appendChild(sb);
+    stage.appendChild(sb); // di stage (datar) biar banner gak ikut rebah sama meja
   }
 
   // arah putaran (placeholder)
@@ -598,6 +601,11 @@ function renderUno(view) {
     seat.style.left = pos[idx].left + "%";
     seat.style.top = pos[idx].top + "%";
     seat.dataset.pid = o.id; // buat target animasi
+    // muter dikit ngikut lengkung meja (kiri/kanan ngadep tengah) + depth cue (makin atas makin jauh)
+    const ry = Math.max(-20, Math.min(20, (50 - pos[idx].left) * 0.42));
+    const far = 1 - Math.max(0, Math.min(1, (pos[idx].top + 2) / 40)); // 0 = deket, 1 = jauh
+    seat.style.setProperty("--ry", ry.toFixed(1) + "deg");
+    seat.style.setProperty("--far", far.toFixed(2));
 
     // kipas punggung = jumlah kartu asli lawan (kalau udah selesai, gak usah)
     const fan = document.createElement("div");
@@ -669,12 +677,12 @@ function renderUno(view) {
     if (selectable || selected) slot.onclick = () => tapCard(i);
     const ang = (pos - (n - 1) / 2) * spread;
     slot.style.setProperty("--ang", ang + "deg");
-    slot.style.setProperty("--lift", Math.abs(ang) * 0.6 + "px");
+    slot.style.setProperty("--lift", Math.abs(ang) * 1.1 + "px"); // busur lebih kentara: tengah paling tinggi
     if (firstDeal) { slot.classList.add("deal"); slot.style.animationDelay = pos * 45 + "ms"; }
     slot.appendChild(el);
     hand.appendChild(slot);
   });
-  table.appendChild(hand);
+  stage.appendChild(hand); // tangan di luar tilt → ngadep kamera penuh, paling depan-bawah
 
   // ===== Hasil akhir: papan ranking (juara → kalah terakhir) =====
   if (view.status === "finished") {
@@ -713,11 +721,11 @@ function renderUno(view) {
       box.appendChild(again);
     }
     over.appendChild(box);
-    table.appendChild(over);
+    stage.appendChild(over); // overlay hasil di luar tilt → papan ranking datar & kebaca
     if (iWon && !celebrated) { celebrated = true; confettiBurst(); }
   }
 
-  root.appendChild(table);
+  root.appendChild(stage);
 
   // ===== BAR bawah: giliran + aksi terakhir =====
   const bar = document.createElement("div");
