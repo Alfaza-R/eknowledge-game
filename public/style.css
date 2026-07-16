@@ -302,15 +302,28 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); animation: unoPulse 1s ease-in-out infinite;
 }
 
-/* kartu terbang pas cangkul (draw) */
-.fly-card {
-  position: fixed; z-index: 80; pointer-events: none; border-radius: 0; overflow: hidden;
+/* kartu lempar (PLAY) — muka kartu, bayangan dari filter animasi */
+.fly-play-card {
+  position: fixed; z-index: 90; pointer-events: none;
+  border: none !important; box-shadow: none !important;
+  transform-origin: center;
+}
+
+/* kartu tarik (DRAW) — flip 3D dari punggung ke muka */
+.fly-flip {
+  position: fixed; z-index: 90; pointer-events: none; transform-style: preserve-3d;
+}
+.fly-flip .face {
+  position: absolute; inset: 0; backface-visibility: hidden; overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+.fly-flip .face-front {
   background:
     url("assets/cards/backfrop%20card.png") center/cover no-repeat,
     linear-gradient(150deg, #e4483b, #a3201c);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
-  transition: transform 0.58s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.58s ease;
 }
+.fly-flip .face-back { transform: rotateY(180deg); }
+.fly-flip .face-back .uno-card { border: none; box-shadow: none; }
 
 /* kursi lawan */
 .uno-seat {

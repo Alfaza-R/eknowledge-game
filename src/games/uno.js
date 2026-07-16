@@ -153,6 +153,7 @@ module.exports = {
       drawnThisTurn: false,
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
       spillUntil: 0,  // timestamp: sampai kapan semua kartu ke-spill (spill card)
+      lastDrawCard: null, // kartu terakhir yang ditarik (buat animasi flip, cuma ke penarik)
       winner: null,   // juara pertama (kartu habis duluan)
       finished: [],   // urutan pemain yang udah habis kartunya (ranking juara)
       over: false,    // game beneran selesai (tersisa ≤1 pemain aktif)
@@ -216,6 +217,7 @@ module.exports = {
       s.hands[pid].push(...drawn);
       s.lastAction = `${s.names[pid]} nyerah — tarik ${n} kartu`;
       s.pendingDraw = 0;
+      s.lastDrawCard = null;
       s.drawnThisTurn = false;
       maybeRecycle(s);
       s.eventId = (state.eventId || 0) + 1;
@@ -227,6 +229,7 @@ module.exports = {
     if (move.type === "draw") {
       const [card] = drawCards(s, 1);
       if (card) s.hands[pid].push(card);
+      s.lastDrawCard = card || null;
       s.drawnThisTurn = true;
       s.lastAction = `${s.names[pid]} ambil kartu`;
       maybeRecycle(s);
@@ -237,6 +240,7 @@ module.exports = {
 
     if (move.type === "pass") {
       s.lastAction = `${s.names[pid]} pass`;
+      s.lastDrawCard = null;
       advance(s, 1);
       return s;
     }
@@ -258,6 +262,7 @@ module.exports = {
     }
     s.currentColor = topCard.color;
     s.drawnThisTurn = false;
+    s.lastDrawCard = null;
     s.eventId = (state.eventId || 0) + 1;
 
     // pemain ini habis kartunya → masuk ranking juara (game tetep lanjut)
@@ -327,9 +332,11 @@ module.exports = {
       s.hands[pid].push(...drawCards(s, s.pendingDraw));
       s.lastAction = `${s.names[pid]} kehabisan waktu — tarik ${s.pendingDraw}`;
       s.pendingDraw = 0;
+      s.lastDrawCard = null;
     } else {
       const [card] = drawCards(s, 1);
       if (card) s.hands[pid].push(card);
+      s.lastDrawCard = card || null;
       s.lastAction = `${s.names[pid]} kehabisan waktu — tarik 1 & di-skip`;
     }
     s.drawnThisTurn = false;
@@ -408,6 +415,11 @@ module.exports = {
       youId: playerId,
       spillActive,
       spillUntil: spillActive ? state.spillUntil : null,
+      // kartu yang barusan gua tarik (buat animasi flip) — cuma ke penariknya, gak bocor ke lawan
+      myDrawnCard:
+        state.lastEvent && state.lastEvent.type === "draw" && state.lastEvent.by === playerId && state.lastDrawCard
+          ? { kind: state.lastDrawCard.kind, color: state.lastDrawCard.color, value: state.lastDrawCard.value }
+          : null,
       lastEvent: state.lastEvent,
       unoNames: state.order
         .filter((id) => state.hands[id] && state.hands[id].length === 1)

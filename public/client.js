@@ -573,7 +573,6 @@ function renderUno(view) {
     el.style.setProperty("--dx", (card.dx || 0) + "px");
     el.style.setProperty("--dy", (card.dy || 0) + "px");
     el.style.zIndex = i;
-    if (i === recent.length - 1 && topChanged) el.classList.add("played");
     stack.appendChild(el);
   });
   piles.appendChild(stack);
@@ -769,39 +768,49 @@ function renderUno(view) {
   const ev = g.lastEvent;
   if (ev && ev.id !== prevEventId) {
     prevEventId = ev.id;
-    if (ev.type === "draw") flyDraw(ev.by, g.youId);
+    if (ev.type === "draw") flyDraw(ev.by, g.youId, g.myDrawnCard);
     else if (ev.type === "play") {
-      flyPlay(ev.by, g.youId, ev.n || 1);       // kartu terbang ke tengah + jumlahnya
+      flyPlay(ev.by, g.youId, ev.n || 1, g.topCard); // lempar muka kartu ke tengah + jumlahnya
       if (ev.finished) victoryPop(ev.by, g, ev.rank); // ada yang selesai → animasi menang
     }
   }
 }
 
-// kartu terbang dari pemain yang main ke tumpukan tengah (+ tampil jumlahnya)
-function flyPlay(byId, youId, n) {
-  const discard = document.querySelector(".uno-card.discard");
-  if (!discard) return;
-  const to = discard.getBoundingClientRect();
+// PLAY: muka kartu dilempar dari tangan/kursi ke tumpukan tengah — arc + overshoot + settle
+function flyPlay(byId, youId, n, playedCard) {
+  const discards = document.querySelectorAll(".uno-card.discard");
+  const topDiscard = discards[discards.length - 1];
+  if (!topDiscard || !playedCard) return;
+  const to = topDiscard.getBoundingClientRect();
+  topDiscard.style.opacity = "0"; // sembunyiin dulu, munculin pas lemparan mendarat
   let source = null;
   if (byId === youId) source = document.querySelector(".uno-hand-fan");
   else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) source = s; });
   const from = source ? source.getBoundingClientRect() : to;
+
   const startL = from.left + from.width / 2 - to.width / 2;
   const startT = from.top + from.height / 2 - to.height / 2;
   const dx = to.left - startL, dy = to.top - startT;
+  const arc = Math.max(40, Math.hypot(dx, dy) * 0.22 + 30); // tinggi lengkungan
+  const rot = Math.round(Math.random() * 16 - 8);           // -8..8 pas mendarat
 
-  for (let k = 0; k < Math.min(n, 5); k++) {
-    const fly = document.createElement("div");
-    fly.className = "fly-card";
-    fly.style.width = to.width + "px"; fly.style.height = to.height + "px";
-    fly.style.left = startL + "px"; fly.style.top = startT + "px";
-    document.body.appendChild(fly);
-    setTimeout(() => requestAnimationFrame(() => {
-      fly.style.transform = `translate(${dx}px, ${dy}px) rotate(${(k - 1) * 5}deg)`;
-      fly.style.opacity = "0";
-    }), k * 75);
-    setTimeout(() => fly.remove(), 600 + k * 75);
-  }
+  const el = unoCardEl(playedCard, {});
+  el.classList.add("fly-play-card");
+  el.style.width = to.width + "px"; el.style.height = to.height + "px";
+  el.style.left = startL + "px"; el.style.top = startT + "px";
+  document.body.appendChild(el);
+
+  const throwE = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+  el.animate([
+    { offset: 0,    transform: "translate(0px,0px) scale(1) rotate(0deg)", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))", easing: throwE },
+    { offset: 0.5,  transform: `translate(${dx * 0.5}px, ${dy * 0.5 - arc}px) scale(1.15) rotate(${rot * 0.4}deg)`, filter: "drop-shadow(0 18px 22px rgba(0,0,0,0.55))", easing: throwE },
+    { offset: 0.82, transform: `translate(${dx}px, ${dy}px) scale(1) rotate(${rot}deg)`, filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.5))", easing: "ease-out" },
+    { offset: 0.91, transform: `translate(${dx}px, ${dy + 3}px) scale(1) rotate(${rot}deg)`, easing: "ease-in" },
+    { offset: 1,    transform: `translate(${dx}px, ${dy}px) scale(1) rotate(${rot}deg)` },
+  ], { duration: 460, fill: "forwards", easing: "linear" });
+  setTimeout(() => { if (topDiscard) topDiscard.style.opacity = "1"; }, 430);
+  setTimeout(() => el.remove(), 520);
+
   if (n > 1) {
     const pop = document.createElement("div");
     pop.className = "count-pop";
@@ -827,31 +836,54 @@ function victoryPop(byId, g, rank) {
   if (rank === 1 || byId === g.youId) confettiBurst();
 }
 
-// kartu terbang dari deck tengah ke pemain yang cangkul
-function flyDraw(byId, youId) {
-  const deck = document.querySelector(".uno-back.deck");
+// DRAW: kartu meluncur dari deck ke tangan. Diri sendiri → flip kebuka; lawan → tetap punggung.
+function flyDraw(byId, youId, drawnCard) {
+  const deck = document.querySelector(".uno-deck-stack") || document.querySelector(".uno-back.deck");
   if (!deck) return;
   const from = deck.getBoundingClientRect();
   let target = null;
   if (byId === youId) target = document.querySelector(".uno-hand-fan");
   else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) target = s; });
   const to = target ? target.getBoundingClientRect() : from;
+  const isMe = byId === youId;
 
-  const fly = document.createElement("div");
-  fly.className = "fly-card";
-  fly.style.width = from.width + "px";
-  fly.style.height = from.height + "px";
-  fly.style.left = from.left + "px";
-  fly.style.top = from.top + "px";
-  document.body.appendChild(fly);
+  // kartu teratas deck naik 5px dulu (80ms) baru kartu meluncur
+  const topDeck = document.querySelector(".uno-deck-stack .uno-back.deck");
+  if (topDeck) topDeck.animate(
+    [{ transform: "translateY(0)" }, { transform: "translateY(-5px)" }, { transform: "translateY(0)" }],
+    { duration: 200, easing: "ease-out" }
+  );
+
+  const flip = document.createElement("div");
+  flip.className = "fly-flip";
+  flip.style.width = from.width + "px"; flip.style.height = from.height + "px";
+  flip.style.left = from.left + "px"; flip.style.top = from.top + "px";
+
+  const front = document.createElement("div");
+  front.className = "face face-front"; // punggung kartu
+  flip.appendChild(front);
+
+  const showFace = isMe && drawnCard;
+  if (showFace) {
+    const back = document.createElement("div");
+    back.className = "face face-back";
+    const inner = unoCardEl(drawnCard, {});
+    inner.style.width = "100%"; inner.style.height = "100%";
+    back.appendChild(inner);
+    flip.appendChild(back);
+  }
+  document.body.appendChild(flip);
 
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
   const dy = to.top + to.height / 2 - (from.top + from.height / 2);
-  requestAnimationFrame(() => {
-    fly.style.transform = `translate(${dx}px, ${dy}px) scale(0.72) rotate(9deg)`;
-    fly.style.opacity = "0.12";
-  });
-  setTimeout(() => fly.remove(), 640);
+  const rotY = showFace ? 180 : 0;
+
+  flip.animate([
+    { offset: 0, transform: "translate(0px,0px) scale(0.95) rotateY(0deg)" },
+    { offset: 0.5, transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(1) rotateY(${rotY * 0.5}deg)` },
+    { offset: 1, transform: `translate(${dx}px, ${dy}px) scale(1) rotateY(${rotY}deg)` },
+  ], { duration: 430, delay: 80, fill: "forwards", easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)" });
+  setTimeout(() => flip.remove(), 560);
 }
 
 function primaryBtn(text, onClick) {
