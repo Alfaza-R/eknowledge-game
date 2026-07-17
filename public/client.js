@@ -268,6 +268,37 @@ const LUDO_BASE_SLOTS = {
   0: [[1,1],[1,4],[4,1],[4,4]], 1: [[1,10],[1,13],[4,10],[4,13]],
   2: [[10,10],[10,13],[13,10],[13,13]], 3: [[10,1],[10,4],[13,1],[13,4]],
 };
+
+// finish tengah: 4 segitiga (gradient tepi→pusat) + glow di titik tujuan.
+// atas=hijau, kanan=kuning, bawah=biru, kiri=merah (ngikut arah lane tiap warna masuk).
+const LUDO_CENTER_SVG = `
+<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="lcg-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--lu-green-l)"/><stop offset="1" stop-color="var(--lu-green-d)"/>
+    </linearGradient>
+    <linearGradient id="lcg-right" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="var(--lu-yellow-l)"/><stop offset="1" stop-color="var(--lu-yellow-d)"/>
+    </linearGradient>
+    <linearGradient id="lcg-bottom" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="var(--lu-blue-l)"/><stop offset="1" stop-color="var(--lu-blue-d)"/>
+    </linearGradient>
+    <linearGradient id="lcg-left" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="var(--lu-red-l)"/><stop offset="1" stop-color="var(--lu-red-d)"/>
+    </linearGradient>
+    <radialGradient id="lcg-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="rgba(255,255,255,0.95)"/>
+      <stop offset="0.55" stop-color="rgba(255,255,255,0.18)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <polygon points="0,0 100,0 50,50" fill="url(#lcg-top)"/>
+  <polygon points="100,0 100,100 50,50" fill="url(#lcg-right)"/>
+  <polygon points="100,100 0,100 50,50" fill="url(#lcg-bottom)"/>
+  <polygon points="0,100 0,0 50,50" fill="url(#lcg-left)"/>
+  <circle cx="50" cy="50" r="22" fill="url(#lcg-glow)"/>
+  <circle cx="50" cy="50" r="5.5" fill="rgba(255,255,255,0.92)"/>
+</svg>`;
 const DICE_FACE = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 
 function ludoCellClass(r, c) {
@@ -319,6 +350,17 @@ function renderLudo(view) {
       cells[r + "_" + c] = cell;
       board.appendChild(cell);
     }
+
+  // ---- dekorasi: 4 home base + finish tengah (overlay z-index:-1, di bawah bidak) ----
+  LUDO_COLORS.forEach((col) => {
+    const hb = document.createElement("div");
+    hb.className = "ludo-home-base " + col;
+    board.appendChild(hb);
+  });
+  const centerPiece = document.createElement("div");
+  centerPiece.className = "ludo-center-piece";
+  centerPiece.innerHTML = LUDO_CENTER_SVG;
+  board.appendChild(centerPiece);
 
   // ---- bidak ----
   for (const p of g.players) {
