@@ -7,6 +7,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const fs = require("fs");
 
 const roomStore = require("./src/rooms");
 
@@ -18,7 +19,31 @@ const games = {
 };
 
 const app = express();
-app.use(express.static(path.join(__dirname, "public")));
+const PUBLIC_DIR = path.join(__dirname, "public");
+
+// Cache-busting: sisipin ?v=<mtime aset> ke style.css & client.js tiap serve index.html,
+// + no-cache di HTML-nya. Jadi tiap deploy (file berubah → mtime berubah → ?v beda),
+// browser DIPAKSA ambil aset baru. Gak ada lagi "keliatan gak berubah" gara-gara cache.
+function assetVersion() {
+  try {
+    const a = fs.statSync(path.join(PUBLIC_DIR, "client.js")).mtimeMs;
+    const b = fs.statSync(path.join(PUBLIC_DIR, "style.css")).mtimeMs;
+    return Math.floor(Math.max(a, b)).toString(36);
+  } catch { return Date.now().toString(36); }
+}
+app.get(["/", "/index.html"], (req, res) => {
+  let html;
+  try { html = fs.readFileSync(path.join(PUBLIC_DIR, "index.html"), "utf8"); }
+  catch { return res.status(500).send("index.html gak ketemu"); }
+  const v = assetVersion();
+  html = html
+    .replace('href="style.css"', `href="style.css?v=${v}"`)
+    .replace('src="client.js"', `src="client.js?v=${v}"`);
+  res.set("Cache-Control", "no-cache");
+  res.type("html").send(html);
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 const server = http.createServer(app);
 const io = new Server(server, {
