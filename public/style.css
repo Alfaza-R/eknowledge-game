@@ -209,16 +209,27 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   position: absolute; inset: 0; z-index: 1; border-radius: 26px; background: transparent;
 }
 
-/* arah putaran (placeholder — nanti bisa diganti aset PNG panah) */
+/* arah putaran: 2 panah lengkung tebal ngelilingin tumpukan, REBAH di atas meja (rotateX
+   sama kaya meja → keliatan elips = kesan melingkar di permukaan). z-index di bawah kartu. */
 .uno-dir {
-  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  font-size: clamp(180px, 34vw, 360px); line-height: 1; font-weight: 700;
-  color: rgba(255, 255, 255, 0.08); z-index: 0; pointer-events: none;
-  animation: spin 16s linear infinite;
-  transition: color 0.3s ease;
+  position: absolute; left: 50%; top: 46%; z-index: 0; pointer-events: none;
+  width: calc(var(--cw, 66px) * 6); height: calc(var(--cw, 66px) * 6);
+  transform: translate(-50%, -50%) perspective(var(--persp, 1300px)) rotateX(var(--tilt, 0deg));
+  transform-origin: center center;
+  filter: drop-shadow(0 0 5px var(--dir-solid, #8aa0c6)) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5));
 }
-.uno-dir.ccw { animation-direction: reverse; }
-@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* lapisan yang diputar pelan (transform di-set via JS biar reverse-nya mulus) */
+.uno-dir-rot { width: 100%; height: 100%; transform-origin: center center; will-change: transform; }
+.uno-dir-svg { width: 100%; height: 100%; display: block; overflow: visible; animation: dirPulse 2.6s ease-in-out infinite; }
+.uno-dir.ccw .uno-dir-svg { transform: scaleX(-1); } /* CCW: cerminin biar arrowhead ngadep kebalikannya */
+/* flash singkat pas arah berubah */
+.uno-dir.flip-flash { animation: dirFlash 0.55s ease-out; }
+@keyframes dirPulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.95; } }
+@keyframes dirFlash {
+  0%   { filter: drop-shadow(0 0 4px var(--dir-solid, #8aa0c6)) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5)); }
+  28%  { filter: drop-shadow(0 0 20px var(--dir-lite, #fff)) drop-shadow(0 0 12px var(--dir-solid, #8aa0c6)); }
+  100% { filter: drop-shadow(0 0 5px var(--dir-solid, #8aa0c6)) drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5)); }
+}
 
 /* pusat: deck + buangan + warna — z-index tinggi biar gak ketutup kursi lawan */
 .uno-play {
@@ -658,6 +669,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   /* KASIH JARAK tangan ↔ tumpukan tengah: tumpukan digeser naik, tangan diturunin,
      dan lompatan kartu pas dipilih/hover dibatesin biar gak nabrak tengah. */
   body.in-table-game .uno-play { top: 39%; }
+  body.in-table-game .uno-dir { top: 39%; } /* ring panah ngikut posisi tumpukan */
   body.in-table-game .uno-hand-fan { bottom: 3%; }
   body.in-table-game .uno-hand-fan .hand-slot .uno-card.playable {
     transform: translateY(calc(var(--cw, 66px) * -0.24));

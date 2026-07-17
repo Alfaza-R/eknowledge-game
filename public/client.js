@@ -409,10 +409,53 @@ function renderLudo(view) {
 // ---------------------------------------------------------------------------
 const UNO_LABEL = { skip: "⦸", reverse: "⇄", draw2: "+2", wild: "★", wild4: "+4", wild8: "+8", spill: "👀" };
 const COLOR_ID = { red: "Merah", yellow: "Kuning", green: "Hijau", blue: "Biru" };
-const DIR_COLOR = {
-  red: "rgba(228,72,59,0.42)", yellow: "rgba(242,180,0,0.48)",
-  green: "rgba(63,174,74,0.42)", blue: "rgba(59,125,228,0.42)",
+// warna panah arah (ngikut warna aktif): solid + lite (buat gradient/glow) + deep
+const DIR_HEX = {
+  red:    { solid: "#ff5a4d", lite: "#ffb4ac", deep: "#b12a20" },
+  yellow: { solid: "#ffc21f", lite: "#ffe693", deep: "#b8850a" },
+  green:  { solid: "#43d357", lite: "#a9f2b3", deep: "#1f8b34" },
+  blue:   { solid: "#4d90ff", lite: "#accaff", deep: "#245fc0" },
 };
+const DIR_NEUTRAL = { solid: "#8aa0c6", lite: "#cdd8ef", deep: "#5a6f9c" };
+
+// SVG: 2 busur tebal bikin lingkaran + arrowhead (marker orient=auto ngikut arah path).
+// warna pakai CSS var biar gampang ganti ngikut warna aktif.
+const UNO_DIR_SVG = `
+<svg viewBox="0 0 100 100" class="uno-dir-svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="ugrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--dir-lite,#cdd8ef)"/>
+      <stop offset="0.55" stop-color="var(--dir-solid,#8aa0c6)"/>
+      <stop offset="1" stop-color="var(--dir-deep,#5a6f9c)"/>
+    </linearGradient>
+    <marker id="uarw" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" refX="3.5" refY="9" orient="auto">
+      <path d="M0,1 L17,9 L0,17 L5.5,9 Z" fill="var(--dir-solid,#8aa0c6)"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="url(#ugrad)" stroke-width="7" stroke-linecap="round">
+    <path d="M14.29 37 A38 38 0 0 1 85.71 37" marker-end="url(#uarw)"/>
+    <path d="M85.71 63 A38 38 0 0 1 14.29 63" marker-end="url(#uarw)"/>
+  </g>
+</svg>`;
+
+// animator putaran panah: pakai rAF + easing kecepatan biar REVERSE mulus
+// (melambat → berhenti sejenak di 0 → ngebut ke arah sebaliknya), gak patah.
+let unoDirRotEl = null, unoDirAngle = 0, unoDirVel = 0, unoDirTarget = 1, unoDirRAF = null, unoDirLast = 0;
+function unoDirStart() {
+  if (unoDirRAF != null) return;
+  unoDirLast = performance.now();
+  const tick = (ts) => {
+    const dt = Math.min(0.05, (ts - unoDirLast) / 1000);
+    unoDirLast = ts;
+    if (!unoDirRotEl || !unoDirRotEl.isConnected) { unoDirRAF = null; return; } // keluar Uno → stop
+    const targetVel = unoDirTarget * 68; // deg/detik (~5.3 detik/putaran)
+    unoDirVel += (targetVel - unoDirVel) * (1 - Math.exp(-dt / 0.13));
+    unoDirAngle = (unoDirAngle + unoDirVel * dt) % 360;
+    unoDirRotEl.style.transform = `rotate(${unoDirAngle.toFixed(2)}deg)`;
+    unoDirRAF = requestAnimationFrame(tick);
+  };
+  unoDirRAF = requestAnimationFrame(tick);
+}
 
 // urutan tampil kartu di tangan: dikumpulin per simbol (angka → aksi → wild), warna jadi tiebreak
 function cardRank(card) {
@@ -544,11 +587,23 @@ function renderUno(view) {
     stage.appendChild(sb); // di stage (datar) biar banner gak ikut rebah sama meja
   }
 
-  // arah putaran (placeholder)
+  // arah putaran: 2 panah lengkung ngelilingin tumpukan, rebah di meja, warna ngikut warna aktif
   const dir = document.createElement("div");
-  dir.className = "uno-dir " + (g.direction === 1 ? "cw" : "ccw");
-  dir.textContent = g.direction === 1 ? "↻" : "↺";
-  dir.style.color = DIR_COLOR[g.currentColor] || "rgba(255,255,255,0.08)";
+  dir.className = "uno-dir" + (g.direction === 1 ? "" : " ccw");
+  const rot = document.createElement("div");
+  rot.className = "uno-dir-rot";
+  rot.innerHTML = UNO_DIR_SVG;
+  dir.appendChild(rot);
+  const dh = DIR_HEX[g.currentColor] || DIR_NEUTRAL;
+  dir.style.setProperty("--dir-solid", dh.solid);
+  dir.style.setProperty("--dir-lite", dh.lite);
+  dir.style.setProperty("--dir-deep", dh.deep);
+  // deteksi REVERSE → kasih flash (cuma kalau tadinya emang lagi main, bukan render pertama)
+  const newDirTarget = g.direction === 1 ? 1 : -1;
+  if (unoDirTarget !== newDirTarget && prevStatus === "playing") dir.classList.add("flip-flash");
+  unoDirTarget = newDirTarget;
+  unoDirRotEl = rot;
+  unoDirStart();
   table.appendChild(dir);
 
   // pusat: deck + buangan + warna aktif
