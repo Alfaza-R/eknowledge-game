@@ -24,6 +24,7 @@ let prevStatus = null;
 let prevTopSig = null;
 let prevBoard = null;
 let celebrated = false;
+let ludoTokenPos = {}; // Ludo: posisi layar bidak render sebelumnya (buat animasi lompat)
 
 // Uno: seleksi kartu buat stack. unoSel = index kartu terpilih (urutan tap = bawah→atas).
 let lastUnoView = null;
@@ -369,6 +370,8 @@ function renderLudo(view) {
       if (!cell) return;
       const tok = document.createElement("div");
       tok.className = "ludo-token " + p.color;
+      tok.dataset.tk = p.color + ti; // key stabil buat animasi lompat
+      tok.innerHTML = '<span class="token-shadow"></span><span class="token-bead"></span>';
       const isMine = p.color === g.myColor;
       if (isMine && myTurn && g.dice !== null && g.movable.includes(ti)) {
         tok.classList.add("movable");
@@ -444,6 +447,28 @@ function renderLudo(view) {
   }
 
   root.appendChild(wrap);
+
+  // ---- animasi LOMPAT: bidak yang pindah kotak melompat (arc) dari posisi lama ke baru ----
+  if (prevStatus !== "playing") ludoTokenPos = {}; // game baru → reset
+  document.querySelectorAll(".ludo-token[data-tk]").forEach((tok) => {
+    const key = tok.dataset.tk;
+    const b = tok.getBoundingClientRect();
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    const prev = ludoTokenPos[key];
+    if (prev && (Math.abs(prev.x - cx) > 1 || Math.abs(prev.y - cy) > 1)) {
+      const dx = prev.x - cx, dy = prev.y - cy;
+      const hop = Math.min(30, Math.hypot(dx, dy) * 0.28 + 8); // makin jauh, lompatan makin tinggi
+      tok.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px)`, easing: "cubic-bezier(0.4,0,0.7,1)", offset: 0 },
+          { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - hop}px)`, offset: 0.5 },
+          { transform: "translate(0, 0)", easing: "cubic-bezier(0.3,0.75,0.4,1)", offset: 1 },
+        ],
+        { duration: 340, easing: "linear" }
+      );
+    }
+    ludoTokenPos[key] = { x: cx, y: cy };
+  });
 }
 
 // ---------------------------------------------------------------------------

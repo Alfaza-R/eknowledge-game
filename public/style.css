@@ -550,21 +550,51 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .ludo-center-piece svg { width: 100%; height: 100%; display: block; }
 
 /* ---- bidak: bead 3D (radial gradient + inner shadow) ---- */
-.ludo-token {
-  position: absolute; inset: 13%; border-radius: 50%; z-index: 2;
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.32), inset 0 2px 3px rgba(255, 255, 255, 0.5);
-  transition: transform 0.12s ease;
+/* ---- bidak: bola glossy 3D (container = posisi; bead = visual; shadow = grounding) ---- */
+.ludo-token { position: absolute; inset: 15%; z-index: 2; } /* ruang ~15% tiap sisi kotak */
+.ludo-token.red    { --tk-l: var(--lu-red-l);    --tk: var(--lu-red);    --tk-d: var(--lu-red-d); }
+.ludo-token.green  { --tk-l: var(--lu-green-l);  --tk: var(--lu-green);  --tk-d: var(--lu-green-d); }
+.ludo-token.yellow { --tk-l: var(--lu-yellow-l); --tk: var(--lu-yellow); --tk-d: var(--lu-yellow-d); }
+.ludo-token.blue   { --tk-l: var(--lu-blue-l);   --tk: var(--lu-blue);   --tk-d: var(--lu-blue-d); }
+
+/* bayangan tanah: elips gelap di bawah bidak (biar keliatan berdiri, bukan nempel) */
+.token-shadow {
+  position: absolute; z-index: 0; left: 50%; bottom: -10%; transform: translateX(-50%);
+  width: 92%; height: 34%; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%);
+  filter: blur(1.5px);
 }
-.ludo-token.red    { background: radial-gradient(circle at 38% 30%, var(--lu-red-l), var(--lu-red) 58%, var(--lu-red-d));       border: 2px solid var(--lu-red-d); }
-.ludo-token.green  { background: radial-gradient(circle at 38% 30%, var(--lu-green-l), var(--lu-green) 58%, var(--lu-green-d)); border: 2px solid var(--lu-green-d); }
-.ludo-token.yellow { background: radial-gradient(circle at 38% 30%, var(--lu-yellow-l), var(--lu-yellow) 58%, var(--lu-yellow-d));border: 2px solid var(--lu-yellow-d); }
-.ludo-token.blue   { background: radial-gradient(circle at 38% 30%, var(--lu-blue-l), var(--lu-blue) 58%, var(--lu-blue-d));    border: 2px solid var(--lu-blue-d); }
-.ludo-token.movable { cursor: pointer; animation: tokPulse 1s ease-in-out infinite; }
-.ludo-token.movable:hover { transform: scale(1.18); z-index: 5; }
-@keyframes tokPulse {
-  0%, 100% { box-shadow: 0 3px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.32), inset 0 2px 3px rgba(255,255,255,0.5), 0 0 0 rgba(255,255,255,0); }
-  50%      { box-shadow: 0 3px 5px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.32), inset 0 2px 3px rgba(255,255,255,0.5), 0 0 11px 3px rgba(255,255,255,0.85); }
+/* bead = bola mengkilap: radial gradient terang(kiri-atas)→gelap(kanan-bawah) + inner shadow */
+.token-bead {
+  position: absolute; z-index: 1; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--tk-l) 0%, var(--tk) 52%, var(--tk-d) 100%);
+  border: 1.5px solid var(--tk-d);
+  box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.38), inset 2px 2px 4px rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
+/* specular: titik putih semi-transparan di pojok kiri-atas */
+.token-bead::after {
+  content: ""; position: absolute; top: 12%; left: 15%; width: 34%; height: 27%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 72%);
+}
+
+/* AKTIF (bisa digerakin): glow halus + bounce naik-turun; bayangan ikut ngempis pas naik */
+.ludo-token.movable { cursor: pointer; }
+.ludo-token.movable .token-bead {
+  animation: tokBounce 0.8s ease-in-out infinite;
+  box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.38), inset 2px 2px 4px rgba(255, 255, 255, 0.4),
+    0 0 0 2px rgba(255, 255, 255, 0.18), 0 0 12px 2px var(--tk-l);
+}
+.ludo-token.movable .token-shadow { animation: tokShadow 0.8s ease-in-out infinite; }
+@keyframes tokBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12%); } }
+@keyframes tokShadow {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  50%      { transform: translateX(-50%) scale(0.82); opacity: 0.68; }
+}
+/* HOVER (mau dipilih): scale up + shadow membesar, bounce distop */
+.ludo-token.movable:hover { z-index: 5; }
+.ludo-token.movable:hover .token-bead { transform: scale(1.12); animation: none; }
+.ludo-token.movable:hover .token-shadow { transform: translateX(-50%) scale(1.28); opacity: 1; animation: none; }
 .ludo-panel { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; min-width: 150px; }
 .ludo-dice {
   width: 64px; height: 64px; border-radius: 14px; background: #12151b; border: 1px solid var(--line);
