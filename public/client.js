@@ -24,7 +24,7 @@ let prevStatus = null;
 let prevTopSig = null;
 let prevBoard = null;
 let celebrated = false;
-let ludoTokenPos = {}; // Ludo: posisi layar bidak render sebelumnya (buat animasi lompat)
+let ludoTokenProg = {}; // Ludo: progress bidak render sebelumnya (buat animasi jalan per-kotak)
 
 // Uno: seleksi kartu buat stack. unoSel = index kartu terpilih (urutan tap = bawah→atas).
 let lastUnoView = null;
@@ -269,6 +269,13 @@ const LUDO_BASE_SLOTS = {
   0: [[1,1],[1,4],[4,1],[4,4]], 1: [[1,10],[1,13],[4,10],[4,13]],
   2: [[10,10],[10,13],[13,10],[13,13]], 3: [[10,1],[10,4],[13,1],[13,4]],
 };
+// koordinat [r,c] bidak dari progress (samain sama coordFor di src/games/ludo.js)
+// 0=base, 1..51=cincin (relatif start), 52..57=home
+function ludoCoord(seat, ti, prog) {
+  if (prog <= 0) return LUDO_BASE_SLOTS[seat][ti];
+  if (prog <= 51) return LUDO_RING[(LUDO_START[seat] + prog - 1) % 52];
+  return LUDO_HOME[seat][prog - 52];
+}
 
 // finish tengah: 4 segitiga (gradient tepi→pusat) + glow di titik tujuan.
 // atas=hijau, kanan=kuning, bawah=biru, kiri=merah (ngikut arah lane tiap warna masuk).
@@ -364,13 +371,15 @@ function renderLudo(view) {
   board.appendChild(centerPiece);
 
   // ---- bidak ----
+  const tokAnim = []; // { el, key, seat, ti, prog } buat animasi jalan per-kotak
   for (const p of g.players) {
+    const seat = LUDO_COLORS.indexOf(p.color);
     p.tokens.forEach((t, ti) => {
       const cell = cells[t.r + "_" + t.c];
       if (!cell) return;
       const tok = document.createElement("div");
       tok.className = "ludo-token " + p.color;
-      tok.dataset.tk = p.color + ti; // key stabil buat animasi lompat
+      tok.dataset.tk = p.color + ti; // key stabil buat animasi
       tok.innerHTML = '<span class="token-shadow"></span><span class="token-bead"></span>';
       const isMine = p.color === g.myColor;
       if (isMine && myTurn && g.dice !== null && g.movable.includes(ti)) {
@@ -378,6 +387,7 @@ function renderLudo(view) {
         tok.onclick = () => emitMove({ type: "move", tokenIndex: ti });
       }
       cell.appendChild(tok);
+      tokAnim.push({ el: tok, key: p.color + ti, seat, ti, prog: t.prog });
     });
   }
   wrap.appendChild(board);
@@ -448,27 +458,39 @@ function renderLudo(view) {
 
   root.appendChild(wrap);
 
-  // ---- animasi LOMPAT: bidak yang pindah kotak melompat (arc) dari posisi lama ke baru ----
-  if (prevStatus !== "playing") ludoTokenPos = {}; // game baru → reset
-  document.querySelectorAll(".ludo-token[data-tk]").forEach((tok) => {
-    const key = tok.dataset.tk;
-    const b = tok.getBoundingClientRect();
-    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-    const prev = ludoTokenPos[key];
-    if (prev && (Math.abs(prev.x - cx) > 1 || Math.abs(prev.y - cy) > 1)) {
-      const dx = prev.x - cx, dy = prev.y - cy;
-      const hop = Math.min(30, Math.hypot(dx, dy) * 0.28 + 8); // makin jauh, lompatan makin tinggi
-      tok.animate(
-        [
-          { transform: `translate(${dx}px, ${dy}px)`, easing: "cubic-bezier(0.4,0,0.7,1)", offset: 0 },
-          { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - hop}px)`, offset: 0.5 },
-          { transform: "translate(0, 0)", easing: "cubic-bezier(0.3,0.75,0.4,1)", offset: 1 },
-        ],
-        { duration: 340, easing: "linear" }
-      );
+  // ---- animasi JALAN PER-KOTAK: bidak melompat kotak-demi-kotak nyusurin jalurnya ----
+  if (prevStatus !== "playing") ludoTokenProg = {}; // game baru → reset
+  for (const a of tokAnim) {
+    const oldProg = ludoTokenProg[a.key];
+    ludoTokenProg[a.key] = a.prog;
+    if (oldProg == null || a.prog <= oldProg) continue; // baru / diam / mundur (kemakan) → gak dianimasiin
+
+    // kumpulin titik tiap kotak yang dilewatin (prog oldProg..a.prog), relatif ke posisi FINAL
+    const fb = a.el.getBoundingClientRect();
+    const fx = fb.x + fb.width / 2, fy = fb.y + fb.height / 2;
+    const pts = [];
+    for (let pr = oldProg; pr <= a.prog; pr++) {
+      const rc = ludoCoord(a.seat, a.ti, pr);
+      const cel = rc && cells[rc[0] + "_" + rc[1]];
+      if (!cel) { pts.push(pts.length ? pts[pts.length - 1] : { x: 0, y: 0 }); continue; }
+      const b = cel.getBoundingClientRect();
+      pts.push({ x: b.x + b.width / 2 - fx, y: b.y + b.height / 2 - fy });
     }
-    ludoTokenPos[key] = { x: cx, y: cy };
-  });
+    const seg = pts.length - 1;
+    if (seg < 1) continue;
+
+    // tiap segmen = 1 lompatan kecil (naik lalu turun)
+    const hop = fb.width * 0.55;
+    const frames = [];
+    pts.forEach((pt, i) => {
+      frames.push({ offset: i / seg, transform: `translate(${pt.x}px, ${pt.y}px)`, easing: "ease-out" });
+      if (i < seg) {
+        const nx = pts[i + 1];
+        frames.push({ offset: (i + 0.5) / seg, transform: `translate(${(pt.x + nx.x) / 2}px, ${(pt.y + nx.y) / 2 - hop}px)`, easing: "ease-in" });
+      }
+    });
+    a.el.animate(frames, { duration: Math.min(1500, 175 * seg + 60), easing: "linear" });
+  }
 }
 
 // ---------------------------------------------------------------------------
