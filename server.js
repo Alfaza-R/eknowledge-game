@@ -21,9 +21,19 @@ const app = express();
 app.use(express.static(path.join(__dirname, "public")));
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  // Reconnect mulus: kalau koneksi putus sebentar (HP ngadat, ganti wifi, tab ke-background),
+  // socket balik dgn ID SAMA + event yang ke-lewat dikirim ulang → pemain gak ke-orphan.
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 90_000, // 1.5 menit
+    skipMiddlewares: true,
+  },
+  // lebih sabar nungguin heartbeat sebelum mutusin (jaringan HP sering telat dikit)
+  pingInterval: 20_000,
+  pingTimeout: 30_000,
+});
 
-const GRACE_MS = 30_000; // grace period 30 detik sebelum pemain dianggap keluar beneran
+const GRACE_MS = 90_000; // grace period sebelum pemain dianggap keluar (samain sama window recovery)
 const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau reconnect
 const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
 const turnTimers = new Map(); // roomId -> timeout
@@ -106,18 +116,34 @@ function scheduleTurnTimer(room) {
   }
   room.turnDeadline = Date.now() + TURN_MS;
   turnTimers.set(room.id, setTimeout(() => {
-    const r = roomStore.getRoom(room.id);
-    if (!r || r.status !== "playing") return;
-    r.state = game.forceSkip(r.state);          // pemain kehabisan waktu → tarik & skip
-    const end = game.checkEnd(r.state);
-    if (end !== null) { r.status = "finished"; r.result = end; }
-    if (r.status === "playing") scheduleTurnTimer(r); else clearTurnTimer(r.id);
-    broadcastRoom(r);
+    try {
+      const r = roomStore.getRoom(room.id);
+      if (!r || r.status !== "playing") return;
+      r.state = game.forceSkip(r.state);          // pemain kehabisan waktu → tarik & skip
+      const end = game.checkEnd(r.state);
+      if (end !== null) { r.status = "finished"; r.result = end; }
+      if (r.status === "playing") scheduleTurnTimer(r); else clearTurnTimer(r.id);
+      broadcastRoom(r);
+    } catch (e) {
+      // jangan sampai 1 error di timer nge-crash-in seluruh server (semua pemain keputus)
+      console.error("[turnTimer] error:", e);
+    }
   }, TURN_MS));
 }
 
 // ---------------------------------------------------------------------------
 io.on("connection", (socket) => {
+  // --- Koneksi PULIH (socket.id sama kaya sebelum putus) ---
+  // Batalin timer "keluar", tandain nyambung lagi, kirim state terbaru.
+  if (socket.recovered) {
+    const t = disconnectTimers.get(socket.id);
+    if (t) { clearTimeout(t); disconnectTimers.delete(socket.id); }
+    for (const room of roomStore.rooms.values()) {
+      const p = room.players.find((pl) => pl.id === socket.id);
+      if (p) { p.connected = true; socket.join(room.id); broadcastRoom(room); break; }
+    }
+  }
+
   // --- Bikin room ---
   socket.on("createRoom", ({ name, game }, cb) => {
     // Tiap page WordPress kirim ?game=... (tictactoe/ludo/uno). Kalau game-nya belum
@@ -260,6 +286,11 @@ function finalizeLeave(roomId, socketId) {
   else clearTurnTimer(roomId);
   broadcastRoom(room);
 }
+
+// Jaring pengaman: error tak tertangkap JANGAN nge-kill proses (kalau mati, SEMUA pemain
+// keputus sekaligus). Cukup di-log; state di memori tetep hidup.
+process.on("uncaughtException", (e) => console.error("[uncaughtException]", e));
+process.on("unhandledRejection", (e) => console.error("[unhandledRejection]", e));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
