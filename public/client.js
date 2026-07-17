@@ -523,11 +523,14 @@ function renderUno(view) {
   const inSelection = unoSel.length > 0;
   const selGroup = inSelection ? g.myHand[unoSel[0]].group : null;
 
-  // ===== MEJA (panggung 3D: stage kasih perspektif, table dimiringin) =====
+  // ===== MEJA (panggung 3D: felt = meja miring di bawah, table = konten datar di atas) =====
   const stage = document.createElement("div");
   stage.className = "uno-stage";
+  const felt = document.createElement("div"); // cuma gambar meja yang dimiringin (layer paling bawah)
+  felt.className = "uno-felt";
   const table = document.createElement("div");
   table.className = "uno-table";
+  stage.appendChild(felt);
   stage.appendChild(table);
   // ukuran kartu nyesuain layar: kecil di HP landscape, gede di desktop
   const cw = Math.max(28, Math.min(66, Math.round(Math.min(window.innerHeight * 0.11, window.innerWidth * 0.08))));

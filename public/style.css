@@ -172,26 +172,25 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* =======================================================================
    UNO — layout meja
    ======================================================================= */
-/* panggung 3D: kasih perspektif ke parent, mejanya yang dimiringin */
+/* panggung: cukup jadi konteks posisi. 3D-nya diisolasi ke .uno-felt doang
+   biar bidang meja yang miring GAK ikut nutupin kartu (dulu semua kartu ketiban meja). */
 .uno-stage {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
   max-height: 74vh;
   margin: 0 auto;
-  --tilt: 44deg;                 /* kemiringan meja (dipakai buat counter-rotate isinya) */
-  perspective: 1300px;
-  perspective-origin: 50% 34%;   /* kamera ngelirik dari atas dikit */
-  transform-style: preserve-3d;
+  --tilt: 44deg;          /* kemiringan meja */
+  --persp: 1300px;        /* kekuatan perspektif */
 }
 
-.uno-table {
-  position: absolute;
-  inset: 0;
-  border-radius: 26px;
-  transform: rotateX(var(--tilt, 0deg));   /* meja rebah ke belakang */
+/* FELT = gambar meja doang, dimiringin sendiri (3D-nya terisolasi di sini).
+   perspective() ditaro di transform-nya, jadi felt jadi 1 layer datar yang keliatan miring,
+   lalu ditumpuk di paling bawah (z-index 0). Kartu2 di atasnya murni pakai z-index. */
+.uno-felt {
+  position: absolute; inset: 0; z-index: 0; border-radius: 26px; pointer-events: none;
+  transform: perspective(var(--persp, 1300px)) rotateX(var(--tilt, 0deg));
   transform-origin: center 58%;
-  transform-style: preserve-3d;
   background:
     url("assets/cards/meja.png") center/cover no-repeat,
     radial-gradient(ellipse 56% 50% at 50% 46%, #3b4570 0%, #263056 45%, transparent 72%),
@@ -199,11 +198,15 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   border: 1px solid var(--line);
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5), var(--shadow);
 }
-/* vignette nempel di permukaan meja → fokus ke tengah, tepi meredup ngikutin perspektif */
-.uno-table::after {
-  content: ""; position: absolute; inset: 0; border-radius: 26px; z-index: 1;
-  pointer-events: none;
+/* vignette nempel di permukaan meja → fokus ke tengah, tepi meredup ngikut perspektif */
+.uno-felt::after {
+  content: ""; position: absolute; inset: 0; border-radius: 26px; pointer-events: none;
   background: radial-gradient(ellipse 72% 66% at 50% 42%, transparent 50%, rgba(0, 0, 0, 0.52) 100%);
+}
+
+/* TABLE = lapisan konten transparan DI ATAS felt (di sinilah dir/tumpukan/kursi ditaruh) */
+.uno-table {
+  position: absolute; inset: 0; z-index: 1; border-radius: 26px; background: transparent;
 }
 
 /* arah putaran (placeholder — nanti bisa diganti aset PNG panah) */
@@ -219,11 +222,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* pusat: deck + buangan + warna — z-index tinggi biar gak ketutup kursi lawan */
 .uno-play {
-  position: absolute; left: 50%; top: 46%;
-  /* counter-rotate lawan kemiringan meja → tumpukan tetap "berdiri" ngadep kamera,
-     translateZ ngangkat dikit biar keliatan melayang di atas meja */
-  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt, 0deg))) translateZ(18px);
-  transform-style: preserve-3d;
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
   z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 0.55rem;
 }
 /* halo gelap di belakang tumpukan tengah biar nonjol dari meja yang rame */
@@ -351,9 +350,8 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* kursi lawan */
 .uno-seat {
   position: absolute;
-  /* berdiri tegak lawan kemiringan meja + muter dikit ngikut lengkung meja (--ry) + skala giliran */
-  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt, 0deg))) rotateY(var(--ry, 0deg)) scale(var(--sScale, 1));
-  transform-style: preserve-3d;
+  /* datar di atas meja; depth dibikin pakai skala (jauh = kecil) + skala giliran */
+  transform: translate(-50%, -50%) scale(calc(1 - 0.16 * var(--far, 0))) scale(var(--sScale, 1));
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   z-index: 3; width: 120px; transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   /* depth cue: yang lebih jauh (--far mendekati 1) sedikit redup + blur tipis */
@@ -615,7 +613,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* HP landscape (layar pendek): perkecil info lawan, warna, & kontrol */
 @media (max-height: 520px) {
-  .uno-stage { --tilt: 36deg; perspective: 1000px; } /* HP: miringin lebih landai biar kebaca */
+  .uno-stage { --tilt: 36deg; --persp: 1000px; } /* HP: miringin lebih landai biar kebaca */
   .uno-hand-fan { bottom: 5%; transform: translateX(-50%) scale(1); } /* HP: turunin dikit biar gak nabrak tumpukan tengah */
   .uno-avatar { width: 26px; height: 26px; font-size: 0.72rem; border-radius: 7px; }
   .seat-info { padding: 2px 5px; gap: 4px; border-radius: 8px; }
