@@ -372,15 +372,39 @@ function renderLudo(view) {
 
   // ---- bidak ----
   const tokAnim = []; // { el, key, seat, ti, prog } buat animasi jalan per-kotak
+  // Kelompokin dulu per kotak: yang numpuk (beda/sama warna) digeser jadi grid kecil
+  // biar SEMUA keliatan & bisa diklik (dulu yang kehimpit ketutup, gak bisa diklik).
+  const byCell = {};
   for (const p of g.players) {
     const seat = LUDO_COLORS.indexOf(p.color);
     p.tokens.forEach((t, ti) => {
-      const cell = cells[t.r + "_" + t.c];
-      if (!cell) return;
+      const key = t.r + "_" + t.c;
+      if (!cells[key]) return;
+      (byCell[key] = byCell[key] || []).push({ p, seat, ti, t });
+    });
+  }
+  for (const key in byCell) {
+    const group = byCell[key];
+    const cell = cells[key];
+    const n = group.length;
+    const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
+    const subW = 100 / cols, subH = 100 / rows, size = Math.min(subW, subH) * 0.86;
+    group.forEach((it, gi) => {
+      const { p, seat, ti, t } = it;
       const tok = document.createElement("div");
       tok.className = "ludo-token " + p.color;
       tok.dataset.tk = p.color + ti; // key stabil buat animasi
       tok.innerHTML = '<span class="token-shadow"></span><span class="token-bead"></span>';
+      if (n > 1) {
+        // taro di sub-kotak (grid) biar gak saling nutupin
+        tok.classList.add("stacked");
+        const gc = gi % cols, gr = Math.floor(gi / cols);
+        const cx = gc * subW + subW / 2, cy = gr * subH + subH / 2;
+        tok.style.left = (cx - size / 2) + "%";
+        tok.style.top = (cy - size / 2) + "%";
+        tok.style.width = size + "%";
+        tok.style.height = size + "%";
+      }
       const isMine = p.color === g.myColor;
       if (isMine && myTurn && g.dice !== null && g.movable.includes(ti)) {
         tok.classList.add("movable");

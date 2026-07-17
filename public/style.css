@@ -552,6 +552,10 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* ---- bidak: bead 3D (radial gradient + inner shadow) ---- */
 /* ---- bidak: bola glossy 3D (container = posisi; bead = visual; shadow = grounding) ---- */
 .ludo-token { position: absolute; inset: 15%; z-index: 2; } /* ruang ~15% tiap sisi kotak */
+/* bidak numpuk: posisi di-set via left/top/width/height (grid) → inset dimatiin */
+.ludo-token.stacked { inset: auto; }
+/* bidak yang bisa digerakin diangkat ke atas biar gampang diklik walau lagi numpuk */
+.ludo-token.movable { z-index: 4; }
 .ludo-token.red    { --tk-l: var(--lu-red-l);    --tk: var(--lu-red);    --tk-d: var(--lu-red-d); }
 .ludo-token.green  { --tk-l: var(--lu-green-l);  --tk: var(--lu-green);  --tk-d: var(--lu-green-d); }
 .ludo-token.yellow { --tk-l: var(--lu-yellow-l); --tk: var(--lu-yellow); --tk-d: var(--lu-yellow-d); }
