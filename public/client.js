@@ -25,6 +25,8 @@ let prevTopSig = null;
 let prevBoard = null;
 let celebrated = false;
 let ludoTokenProg = {}; // Ludo: progress bidak render sebelumnya (buat animasi jalan per-kotak)
+let ludoPrevDice = null; // dadu render sebelumnya (buat trigger animasi lempar pas null→angka)
+let ludoLastDiceVal = 1; // angka dadu terakhir yang ditampilin (pas dadu null / nunggu lempar)
 
 // Uno: seleksi kartu buat stack. unoSel = index kartu terpilih (urutan tap = bawah→atas).
 let lastUnoView = null;
@@ -309,6 +311,55 @@ const LUDO_CENTER_SVG = `
 </svg>`;
 const DICE_FACE = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 
+// ---- dadu 3D: kubus 6 sisi + animasi lempar ----
+const DICE_PIPS = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+const DICE_FACES = { front:1, back:6, right:3, left:4, top:5, bottom:2 }; // sisi seberang = 7
+// rotasi kubus biar angka X ngadep kamera
+const DICE_ROT = { 1:{x:0,y:0}, 2:{x:90,y:0}, 3:{x:0,y:-90}, 4:{x:0,y:90}, 5:{x:-90,y:0}, 6:{x:0,y:180} };
+const DICE_IDLE = { x:-16, y:20 }; // dimiringin dikit biar keliatan 3D (2-3 sisi kebuka)
+
+function diceFaceEl(value, posClass) {
+  const face = document.createElement("div");
+  face.className = "dice-face dice-" + posClass;
+  const set = new Set(DICE_PIPS[value] || []);
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement("span");
+    cell.className = "dice-cell";
+    if (set.has(i)) { const p = document.createElement("span"); p.className = "dice-pip"; cell.appendChild(p); }
+    face.appendChild(cell);
+  }
+  return face;
+}
+function ludoDice3d(value) {
+  const box = document.createElement("div"); box.className = "dice3d";
+  const cube = document.createElement("div"); cube.className = "dice-cube";
+  for (const pos in DICE_FACES) cube.appendChild(diceFaceEl(DICE_FACES[pos], pos));
+  box.appendChild(cube);
+  const r = DICE_ROT[value] || DICE_ROT[1];
+  cube.style.transform = `translateZ(-31px) rotateX(${r.x + DICE_IDLE.x}deg) rotateY(${r.y + DICE_IDLE.y}deg)`;
+  return { box, cube, rot: r };
+}
+// lempar: tumble 3D acak → mendarat di angka final (overshoot) + bounce + glow
+function rollDiceAnim(cube, box, r) {
+  const fx = r.x + DICE_IDLE.x, fy = r.y + DICE_IDLE.y;
+  const spinX = (2 + Math.floor(Math.random() * 2)) * 360;
+  const spinY = (2 + Math.floor(Math.random() * 2)) * 360;
+  const dirX = Math.random() < 0.5 ? 1 : -1, dirY = Math.random() < 0.5 ? 1 : -1;
+  const startX = fx + dirX * spinX + (Math.random() * 50 - 25);
+  const startY = fy + dirY * spinY + (Math.random() * 50 - 25);
+  cube.animate([
+    { transform: `translateZ(-31px) rotateX(${startX}deg) rotateY(${startY}deg)`, offset: 0, easing: "cubic-bezier(0.2,0.75,0.35,1)" },
+    { transform: `translateZ(-31px) rotateX(${fx + dirX * 40}deg) rotateY(${fy + dirY * 40}deg)`, offset: 0.72, easing: "cubic-bezier(0.34,1.56,0.64,1)" },
+    { transform: `translateZ(-31px) rotateX(${fx}deg) rotateY(${fy}deg)`, offset: 1 },
+  ], { duration: 780, easing: "linear" });
+  box.animate([
+    { transform: "translateY(-4px) scale(1.05)", offset: 0 },
+    { transform: "translateY(-20px) scale(1.12)", offset: 0.32 },
+    { transform: "translateY(0) scale(1)", offset: 1, easing: "cubic-bezier(0.34,1.56,0.64,1)" },
+  ], { duration: 780, easing: "ease-out" });
+  setTimeout(() => { if (box.isConnected) box.classList.add("dice-flash"); }, 700);
+}
+
 function ludoCellClass(r, c) {
   for (const seat of [0, 1, 2, 3])
     if (LUDO_HOME[seat].some(([hr, hc]) => hr === r && hc === c)) return "lane " + LUDO_COLORS[seat];
@@ -420,10 +471,17 @@ function renderLudo(view) {
   const panel = document.createElement("div");
   panel.className = "ludo-panel";
 
-  const dice = document.createElement("div");
-  dice.className = "ludo-dice" + (g.dice ? " rolled" : "");
-  dice.textContent = g.dice ? DICE_FACE[g.dice] : "🎲";
-  panel.appendChild(dice);
+  // dadu 3D — tampilin angka aktif (atau angka terakhir pas nunggu lempar)
+  if (prevStatus !== "playing") { ludoPrevDice = null; ludoLastDiceVal = 1; } // game baru → reset
+  const d = ludoDice3d(g.dice != null ? g.dice : ludoLastDiceVal);
+  if (myTurn && g.canRoll) {
+    d.box.classList.add("rollable", "dice-ready");
+    d.box.onclick = () => emitMove({ type: "roll" });
+  }
+  panel.appendChild(d.box);
+  if (g.dice != null && ludoPrevDice == null) rollDiceAnim(d.cube, d.box, d.rot); // null→angka = baru dilempar
+  if (g.dice != null) ludoLastDiceVal = g.dice;
+  ludoPrevDice = g.dice;
 
   const turn = document.createElement("p");
   turn.className = "turn" + (myTurn ? " my-turn" : "");

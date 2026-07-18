@@ -601,11 +601,48 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .ludo-token.movable:hover .token-bead { transform: scale(1.12); animation: none; }
 .ludo-token.movable:hover .token-shadow { transform: translateX(-50%) scale(1.28); opacity: 1; animation: none; }
 .ludo-panel { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; min-width: 150px; }
-.ludo-dice {
-  width: 64px; height: 64px; border-radius: 14px; background: #12151b; border: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: center; font-size: 2.7rem; line-height: 1; color: #fff;
+/* ---- dadu 3D (kubus asli 6 sisi, pip cekung) ---- */
+.dice3d {
+  width: 62px; height: 62px; position: relative; perspective: 460px;
+  margin: 6px auto 12px; cursor: default;
+  filter: drop-shadow(0 9px 7px rgba(0, 0, 0, 0.5));
 }
-.ludo-dice.rolled { animation: pop 0.3s ease; }
+.dice3d.rollable { cursor: pointer; }
+.dice-cube { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; }
+.dice-face {
+  position: absolute; width: 62px; height: 62px; box-sizing: border-box; border-radius: 15px;
+  backface-visibility: hidden; padding: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1px;
+  background: linear-gradient(145deg, #fdfbf3 0%, #efe8d6 55%, #e0d7bf 100%);
+  border: 1px solid rgba(120, 102, 66, 0.4);
+  box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.85), inset -3px -4px 8px rgba(120, 100, 60, 0.3);
+}
+.dice-front  { transform: rotateY(0deg)    translateZ(31px); }
+.dice-back   { transform: rotateY(180deg)  translateZ(31px); }
+.dice-right  { transform: rotateY(90deg)   translateZ(31px); }
+.dice-left   { transform: rotateY(-90deg)  translateZ(31px); }
+.dice-top    { transform: rotateX(90deg)   translateZ(31px); }
+.dice-bottom { transform: rotateX(-90deg)  translateZ(31px); }
+.dice-cell { display: flex; align-items: center; justify-content: center; }
+.dice-pip {
+  width: 72%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 42% 38%, #453c31, #14100a);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.8), inset 0 -1px 1px rgba(255, 255, 255, 0.12), 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+/* idle: goyang halus pas giliran lempar (ngajakin diklik) */
+.dice3d.dice-ready { animation: diceReady 1.7s ease-in-out infinite; }
+@keyframes diceReady {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-2px) rotate(-2.5deg); }
+  70% { transform: translateY(-1px) rotate(2.5deg); }
+}
+/* glow singkat di hasil setelah dadu berhenti */
+.dice3d.dice-flash { animation: diceFlash 0.6s ease-out; }
+@keyframes diceFlash {
+  0%   { filter: drop-shadow(0 9px 7px rgba(0,0,0,0.5)) drop-shadow(0 0 0 rgba(91,147,255,0)); }
+  30%  { filter: drop-shadow(0 9px 7px rgba(0,0,0,0.5)) drop-shadow(0 0 16px rgba(91,147,255,0.95)); }
+  100% { filter: drop-shadow(0 9px 7px rgba(0,0,0,0.5)) drop-shadow(0 0 0 rgba(91,147,255,0)); }
+}
 .ludo-players { width: 100%; display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.3rem; }
 .ludo-prow {
   display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;
