@@ -22,12 +22,13 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--fg);
+  /* background paling luar: foto (cover) + overlay gelap tipis biar konten tetep kebaca */
   background:
-    radial-gradient(1100px 560px at 50% -12%, #1c2536 0%, transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, #221a2e 0%, transparent 55%),
-    var(--bg);
+    linear-gradient(rgba(9, 11, 16, 0.55), rgba(9, 11, 16, 0.72)),
+    url("https://alatuji.co.id/wp-content/uploads/2026/07/ChatGPT-Image-17-Jul-2026-16.36.26.png") center center / cover no-repeat;
+  background-color: var(--bg);
   min-height: 100vh;
   display: flex;
   align-items: center;

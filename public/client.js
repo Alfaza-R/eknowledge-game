@@ -649,7 +649,8 @@ function unoBackEl(extra = "") {
 
 // posisi kursi lawan: disebar di busur atas meja, kiri → kanan
 function seatPositions(k) {
-  const cx = 50, cy = 38, rx = 47, ry = 40;
+  // rx/ry dikecilin biar lawan (atas & kiri-kanan) lebih DEKET ke meja, gak ngambang jauh
+  const cx = 50, cy = 41, rx = 42, ry = 28;
   const out = [];
   for (let i = 0; i < k; i++) {
     const t = Math.PI - ((i + 1) * Math.PI) / (k + 1); // 180°..0°

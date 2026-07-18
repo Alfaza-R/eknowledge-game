@@ -138,6 +138,7 @@ module.exports = {
     const prog = s.tokens[pid][ti];
     const np = prog === 0 ? 1 : prog + dice;
     s.tokens[pid][ti] = np;
+    const reachedHome = np === 57; // bidak ini baru masuk tujuan
 
     let ate = false;
     if (np <= 51) {
@@ -161,9 +162,15 @@ module.exports = {
       return s;
     }
 
-    s.lastAction = `${nm} jalan${ate ? " & makan bidak lawan! 😈" : ""}`;
-    if (dice === 6) s.dice = null;   // dapet 6 → lempar lagi (pemain sama)
-    else advance(s);
+    s.lastAction = `${nm} jalan${ate ? " & makan bidak lawan! 😈" : ""}${reachedHome ? " — bidak MASUK! 🏠" : ""}`;
+    // BONUS lempar lagi: dapet 6, ATAU makan bidak lawan, ATAU berhasil masukin bidak ke tujuan
+    const bonusRoll = dice === 6 || ate || reachedHome;
+    if (bonusRoll) {
+      s.dice = null;                 // giliran gak pindah — pemain sama lempar lagi
+      s.lastAction += " — lempar lagi! 🎲";
+    } else {
+      advance(s);
+    }
     return s;
   },
 
