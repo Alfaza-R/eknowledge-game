@@ -222,7 +222,8 @@ io.on("connection", (socket) => {
     // VALIDASI di server — kiriman client gak dipercaya bulat-bulat
     if (!game.validateMove(room.state, socket.id, move)) return;
 
-    room.state = game.applyMove(room.state, move);
+    // actorId dikirim juga: ada aksi yang sah DI LUAR giliran (mis. Uno callUno/catchUno)
+    room.state = game.applyMove(room.state, move, socket.id);
 
     const end = game.checkEnd(room.state);
     if (end !== null) {

@@ -114,6 +114,14 @@ function advance(state, steps) {
   state.drawnThisTurn = false;
 }
 
+// Status "udah teriak UNO" hangus lagi kalau kartunya nambah jadi >2 (mis. kena denda/narik).
+function syncUnoFlags(state) {
+  if (!state.unoCalled) state.unoCalled = {};
+  for (const id of state.order) {
+    if ((state.hands[id] || []).length > 2) state.unoCalled[id] = false;
+  }
+}
+
 function describe(card) {
   const c = { red: "merah", yellow: "kuning", green: "hijau", blue: "biru" }[card.color] || "";
   if (card.kind === "num") return `${c} ${card.value}`.trim();
@@ -154,6 +162,7 @@ module.exports = {
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
       spillUntil: 0,  // timestamp: sampai kapan semua kartu ke-spill (spill card)
       lastDrawCard: null, // kartu terakhir yang ditarik (buat animasi flip, cuma ke penarik)
+      unoCalled: {},  // playerId -> udah teriak UNO buat sisa kartu sekarang?
       winner: null,   // juara pertama (kartu habis duluan)
       finished: [],   // urutan pemain yang udah habis kartunya (ranking juara)
       over: false,    // game beneran selesai (tersisa ≤1 pemain aktif)
@@ -167,8 +176,27 @@ module.exports = {
 
   validateMove(state, playerId, move) {
     if (state.over) return false; // game udah bubar
-    if (state.order[state.currentTurn] !== playerId) return false;
     if (!move || !move.type) return false;
+
+    // ---- UNO: boleh DI LUAR giliran (teriak sendiri / nangkep lawan) ----
+    if (move.type === "callUno") {
+      const h = state.hands[playerId];
+      if (!h || state.finished.includes(playerId)) return false;
+      if (state.unoCalled && state.unoCalled[playerId]) return false; // udah teriak
+      // boleh sebelum (sisa 2, mau buang kartu kedua terakhir) atau sesudah (sisa 1)
+      return h.length === 1 || h.length === 2;
+    }
+    if (move.type === "catchUno") {
+      const tid = move.targetId;
+      if (!tid || tid === playerId) return false;              // gak bisa nangkep diri sendiri
+      if (!state.hands[playerId] || state.finished.includes(playerId)) return false;
+      const th = state.hands[tid];
+      if (!th || state.finished.includes(tid)) return false;
+      // cuma sah kalau target beneran sisa 1 kartu & belum teriak UNO
+      return th.length === 1 && !(state.unoCalled && state.unoCalled[tid]);
+    }
+
+    if (state.order[state.currentTurn] !== playerId) return false;
     const hand = state.hands[playerId];
     const top = state.discardPile[state.discardPile.length - 1];
 
@@ -207,9 +235,33 @@ module.exports = {
     return true;
   },
 
-  applyMove(state, move) {
+  // actorId = pemain yang ngirim move (perlu buat aksi di luar giliran: callUno/catchUno)
+  applyMove(state, move, actorId) {
     const s = structuredClone(state);
     const pid = s.order[s.currentTurn];
+    if (!s.unoCalled) s.unoCalled = {};
+
+    // ---- teriak UNO sendiri (gak ganti giliran) ----
+    if (move.type === "callUno") {
+      s.unoCalled[actorId] = true;
+      s.lastAction = `${s.names[actorId]} teriak UNO! 🔥`;
+      s.eventId = (state.eventId || 0) + 1;
+      s.lastEvent = { id: s.eventId, type: "callUno", by: actorId };
+      return s;
+    }
+
+    // ---- nangkep lawan yang lupa teriak UNO → dia tarik 2 (gak ganti giliran) ----
+    if (move.type === "catchUno") {
+      const tid = move.targetId;
+      s.hands[tid].push(...drawCards(s, 2));
+      s.unoCalled[tid] = false;
+      s.lastAction = `${s.names[actorId]} nangkep ${s.names[tid]} lupa UNO — tarik 2! 😈`;
+      maybeRecycle(s);
+      s.eventId = (state.eventId || 0) + 1;
+      s.lastEvent = { id: s.eventId, type: "catchUno", by: actorId, target: tid, n: 2 };
+      syncUnoFlags(s);
+      return s;
+    }
 
     if (move.type === "takeDraw") {
       const n = s.pendingDraw;
@@ -222,6 +274,7 @@ module.exports = {
       maybeRecycle(s);
       s.eventId = (state.eventId || 0) + 1;
       s.lastEvent = { id: s.eventId, type: "draw", by: pid, n };
+      syncUnoFlags(s);
       advance(s, 1);
       return s;
     }
@@ -235,6 +288,7 @@ module.exports = {
       maybeRecycle(s);
       s.eventId = (state.eventId || 0) + 1;
       s.lastEvent = { id: s.eventId, type: "draw", by: pid, n: 1 };
+      syncUnoFlags(s);
       return s;
     }
 
@@ -343,6 +397,7 @@ module.exports = {
     s.eventId = (s.eventId || 0) + 1;
     s.lastEvent = { id: s.eventId, type: "draw", by: pid, n: 1 };
     maybeRecycle(s);
+    syncUnoFlags(s);
     advance(s, 1);
     return s;
   },
@@ -407,6 +462,9 @@ module.exports = {
           count: state.hands[id].length,
           isTurn: state.order[state.currentTurn] === id,
           done: state.finished.includes(id),
+          calledUno: !!(state.unoCalled && state.unoCalled[id]),
+          // sisa 1 kartu tapi belum teriak → bisa ditangkep pemain lain
+          catchable: state.hands[id].length === 1 && !(state.unoCalled && state.unoCalled[id]) && !state.finished.includes(id),
           // pas spill aktif, kartu lawan keliatan (cuma data tampilan)
           revealHand: spillActive ? state.hands[id].map((c) => ({ kind: c.kind, color: c.color, value: c.value })) : null,
         })),
@@ -420,6 +478,13 @@ module.exports = {
       pendingDraw: pending,
       mustRespondPlus: meIsCurrent && pending > 0, // giliranku & ada tumpukan plus
       youId: playerId,
+      // ---- UNO call ----
+      iCalledUno: !!(state.unoCalled && state.unoCalled[playerId]),
+      // boleh teriak pas sisa 2 (sebelum buang kartu kedua terakhir) atau sisa 1 (sesudah)
+      canCallUno:
+        !state.finished.includes(playerId) &&
+        !(state.unoCalled && state.unoCalled[playerId]) &&
+        (hand.length === 1 || hand.length === 2),
       spillActive,
       spillUntil: spillActive ? state.spillUntil : null,
       // kartu yang barusan gua tarik (buat animasi flip) — cuma ke penariknya, gak bocor ke lawan

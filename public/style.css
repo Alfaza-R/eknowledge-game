@@ -444,6 +444,33 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-seat.turn .uno-avatar { box-shadow: 0 0 0 2px var(--accent); }
 .uno-seat.turn .seat-name { color: var(--accent); }
 .uno-badge { color: var(--danger); font-weight: 800; font-size: 0.68rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
+
+/* ---- CALL UNO ---- */
+/* tombol teriak UNO (punya sendiri) */
+.uno-call-btn {
+  width: auto; margin: 0; padding: 0.5rem 1.7rem;
+  font-family: inherit; font-size: 1rem; font-weight: 900; letter-spacing: 0.08em; color: #fff;
+  background: linear-gradient(135deg, #ff7a45, #e4483b);
+  border: 2px solid #fff; border-radius: 999px; cursor: pointer;
+  animation: unoCallPulse 0.9s ease-in-out infinite;
+}
+/* tombol nangkep lawan yang lupa teriak UNO (nempel di bawah kursi lawan) */
+.uno-catch-btn {
+  position: absolute; left: 50%; top: 100%; margin: 0;
+  padding: 2px 11px; white-space: nowrap; z-index: 12;
+  font-family: inherit; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.06em; color: #fff;
+  background: linear-gradient(135deg, #ff7a45, #d62828);
+  border: 1.5px solid #fff; border-radius: 999px; cursor: pointer;
+  animation: unoCatchPulse 0.9s ease-in-out infinite;
+}
+@keyframes unoCallPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(228, 72, 59, 0.55); }
+  50% { transform: scale(1.07); box-shadow: 0 7px 24px rgba(228, 72, 59, 0.95); }
+}
+@keyframes unoCatchPulse {
+  0%, 100% { transform: translate(-50%, 4px) scale(1); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); }
+  50% { transform: translate(-50%, 4px) scale(1.12); box-shadow: 0 4px 16px rgba(228, 72, 59, 0.9); }
+}
 @keyframes unoPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
 
 /* tangan kamu (kipas bawah) — jarak angkat proporsional ke ukuran kartu (--cw) */

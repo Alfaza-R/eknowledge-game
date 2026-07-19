@@ -870,12 +870,23 @@ function renderUno(view) {
 
     const info = document.createElement("div");
     info.className = "seat-info";
+    // badge "UNO!" cuma muncul kalau dia BENERAN udah teriak
     const countHtml = o.done
       ? '<span class="seat-count done">selesai</span>'
-      : `<span class="seat-count">🂠 ${o.count}${o.count === 1 ? ' <span class="uno-badge">UNO!</span>' : ""}</span>`;
+      : `<span class="seat-count">🂠 ${o.count}${o.count === 1 && o.calledUno ? ' <span class="uno-badge">UNO!</span>' : ""}</span>`;
     info.innerHTML = `<div class="uno-avatar">${initial(o.name)}</div>
       <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>${countHtml}</div>`;
     seat.appendChild(info);
+
+    // lawan sisa 1 kartu tapi LUPA teriak → tombol tangkep (dia kena tarik 2)
+    if (playing && o.catchable) {
+      const catchBtn = document.createElement("button");
+      catchBtn.className = "uno-catch-btn";
+      catchBtn.textContent = "UNO!";
+      catchBtn.title = `Tangkep ${o.name} — dia lupa teriak UNO (tarik 2)`;
+      catchBtn.onclick = (e) => { e.stopPropagation(); emitMove({ type: "catchUno", targetId: o.id }); };
+      seat.appendChild(catchBtn);
+    }
     table.appendChild(seat);
   });
 
@@ -991,6 +1002,16 @@ function renderUno(view) {
   // ===== KONTROL: mainkan / batal / tarik / lewati =====
   const controls = document.createElement("div");
   controls.className = "uno-controls";
+  // Teriak UNO — muncul kapan aja (gak harus giliran) pas sisa 2 kartu (sebelum buang
+  // kartu kedua terakhir) atau sisa 1 (sesudah). Kalau lupa, bisa ditangkep lawan.
+  if (playing && g.canCallUno) {
+    const unoBtn = document.createElement("button");
+    unoBtn.className = "uno-call-btn";
+    unoBtn.textContent = "UNO!";
+    unoBtn.title = "Teriak UNO sebelum ketahuan lawan (kalau lupa: tarik 2)";
+    unoBtn.onclick = () => emitMove({ type: "callUno" });
+    controls.appendChild(unoBtn);
+  }
   if (myTurn) {
     if (g.pendingDraw > 0) {
       if (unoSel.length > 0) {
