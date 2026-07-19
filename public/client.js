@@ -799,12 +799,19 @@ function renderUno(view) {
   const stack = document.createElement("div");
   stack.className = "uno-discard-stack";
   const recent = g.recentDiscard && g.recentDiscard.length ? g.recentDiscard : [g.topCard];
+  const nRec = recent.length;
   recent.forEach((card, i) => {
     const el = unoCardEl(card, {});
     el.classList.add("discard");
-    el.style.setProperty("--spin", (card.spin || 0) + "deg");
-    el.style.setProperty("--dx", (card.dx || 0) + "px");
-    el.style.setProperty("--dy", (card.dy || 0) + "px");
+    const isTop = i === nRec - 1;
+    // kartu PALING ATAS = kartu aktif → rotasi & geser dikecilin biar tetep jelas kebaca
+    const k = isTop ? 0.32 : 1;
+    el.style.setProperty("--spin", ((card.spin || 0) * k).toFixed(1) + "deg");
+    el.style.setProperty("--dx", ((card.dx || 0) * k).toFixed(1) + "px");
+    el.style.setProperty("--dy", ((card.dy || 0) * k).toFixed(1) + "px");
+    // makin ke bawah makin redup → cuma tepinya yang keliatan
+    el.style.setProperty("--depth", nRec > 1 ? ((nRec - 1 - i) / (nRec - 1)).toFixed(2) : "0");
+    if (isTop) el.classList.add("top");
     el.style.zIndex = i;
     stack.appendChild(el);
   });
@@ -1046,7 +1053,13 @@ function flyPlay(byId, youId, n, playedCard) {
     { offset: 0.91, transform: `translate(${dx}px, ${dy + 3}px) scale(1) rotate(${rot}deg)`, easing: "ease-in" },
     { offset: 1,    transform: `translate(${dx}px, ${dy}px) scale(1) rotate(${rot}deg)` },
   ], { duration: 460, fill: "forwards", easing: "linear" });
-  setTimeout(() => { if (topDiscard) topDiscard.style.opacity = "1"; }, 430);
+  // muncul pas lemparan mendarat + efek settle (turun dikit lalu diam)
+  setTimeout(() => {
+    if (!topDiscard) return;
+    topDiscard.style.opacity = "1";
+    topDiscard.classList.add("landing");
+    setTimeout(() => topDiscard.classList.remove("landing"), 320);
+  }, 430);
   setTimeout(() => el.remove(), 520);
 
   if (n > 1) {

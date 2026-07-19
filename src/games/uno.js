@@ -254,10 +254,10 @@ module.exports = {
     // buang dari tangan (index besar dulu biar aman)
     for (const i of idxs.slice().sort((a, b) => b - a)) s.hands[pid].splice(i, 1);
     for (const c of cards) {
-      // puteran & geser acak biar tumpukan tengah keliatan berantakan
-      c.spin = Math.round((Math.random() * 2 - 1) * 18);
-      c.dx = Math.round((Math.random() * 2 - 1) * 8);
-      c.dy = Math.round((Math.random() * 2 - 1) * 8);
+      // puteran & geser acak biar tumpukan tengah keliatan berantakan (natural)
+      c.spin = Math.round((Math.random() * 2 - 1) * 12); // -12°..+12°
+      c.dx = Math.round((Math.random() * 2 - 1) * 7);
+      c.dy = Math.round((Math.random() * 2 - 1) * 7);
       s.discardPile.push(c); // bawah → atas
     }
     s.currentColor = topCard.color;

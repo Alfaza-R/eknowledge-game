@@ -283,17 +283,40 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
 .uno-card.discard { width: calc(var(--cw, 66px) * 1.35); font-size: 2.3rem; }
 
-/* tumpukan buangan tengah: kartu-kartu tercecer */
-.uno-discard-stack { position: relative; width: calc(var(--cw, 66px) * 1.35); aspect-ratio: 826 / 1299; }
-.uno-discard-stack .uno-card.discard {
+/* tumpukan buangan tengah: kartu numpuk berantakan, ada TEBAL & bayangan antar kartu.
+   Rebah dikit ngikut meja (perspective sendiri, terisolasi) tapi tetep kebaca. */
+.uno-discard-stack {
+  position: relative; width: calc(var(--cw, 66px) * 1.35); aspect-ratio: 826 / 1299;
+  transform: perspective(760px) rotateX(13deg);
+  filter: drop-shadow(0 14px 12px rgba(0, 0, 0, 0.55)); /* bayangan tumpukan ke meja */
+}
+.uno-discard-stack .uno-card.discard,
+.uno-discard-stack .uno-card.discard.has-img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg));
+  /* shadow bertingkat = SISI/ketebalan kartu, + bayangan jatuh ke kartu di bawahnya */
+  box-shadow:
+    0 1px 0 rgba(48, 36, 24, 0.42),
+    0 2px 0 rgba(46, 34, 22, 0.36),
+    0 3px 0 rgba(42, 31, 20, 0.3),
+    0 4px 1px rgba(38, 28, 18, 0.24),
+    0 7px 12px rgba(0, 0, 0, 0.5);
+  /* makin dalem makin redup → yang bawah cuma keliatan tepinya */
+  filter: brightness(calc(1 - 0.32 * var(--depth, 0)));
 }
-.uno-discard-stack .uno-card.discard.played { animation: slamSpin 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
-@keyframes slamSpin {
-  0% { transform: translate(var(--dx, 0), calc(var(--dy, 0) - var(--cw, 66px) * 0.7)) rotate(calc(var(--spin, 0deg) - 14deg)) scale(1.3); opacity: 0; }
-  60% { opacity: 1; }
-  100% { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg)); opacity: 1; }
+/* highlight tipis di tepi atas + garis gelap di tepi bawah → kesan kena cahaya & ada tebalnya */
+.uno-discard-stack .uno-card.discard::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 -1.5px 0 rgba(0, 0, 0, 0.32);
+}
+.uno-discard-stack .uno-card.discard.top { filter: none; } /* kartu aktif paling terang */
+
+/* kartu baru mendarat: turun dikit lalu diam (settle) */
+.uno-discard-stack .uno-card.discard.landing { animation: discardSettle 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes discardSettle {
+  0%   { transform: translate(var(--dx, 0), calc(var(--dy, 0) - 8px)) rotate(var(--spin, 0deg)) scale(1.07); }
+  60%  { transform: translate(var(--dx, 0), calc(var(--dy, 0) + 2px)) rotate(var(--spin, 0deg)) scale(0.99); }
+  100% { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(var(--spin, 0deg)) scale(1); }
 }
 .uno-card.playable { outline: 2px solid var(--ok); outline-offset: 2px; animation: cardGlow 1.4s ease-in-out infinite; }
 @keyframes cardGlow {
