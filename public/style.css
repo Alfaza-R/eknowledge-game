@@ -252,12 +252,31 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   filter: drop-shadow(0 18px 15px rgba(0, 0, 0, 0.6));
 }
 
-/* deck numpuk rapi (bukan berantakan) */
-.uno-deck-stack { position: relative; width: calc(var(--cw, 66px) * 1.15); aspect-ratio: 826 / 1299; flex: 0 0 auto; transition: transform 0.12s ease; }
+/* deck numpuk rapi + TEBAL (kaya setumpuk kartu beneran) */
+.uno-deck-stack {
+  position: relative; width: calc(var(--cw, 66px) * 1.15); aspect-ratio: 826 / 1299;
+  flex: 0 0 auto; transition: transform 0.12s ease;
+  --edge: calc(var(--cw, 66px) * 0.038); /* tebal 1 "lembar", proporsional ke ukuran kartu */
+}
 .uno-deck-stack .uno-back.deck {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  transform: translate(calc(var(--i) * 3px), calc(var(--i) * 3px));
+  transform: translate(calc(var(--i) * 1.2px), calc(var(--i) * 1.2px)); /* rapi, cuma sedikit ragged di tepi */
   z-index: calc(10 - var(--i));
+}
+/* SISI deck: shadow bertumpuk terang-gelap gantian = tepi tiap lembar kartu */
+.uno-deck-stack .uno-back.deck:nth-child(1) {
+  box-shadow:
+    0 calc(var(--edge) * 1) 0 #f2ece0,
+    0 calc(var(--edge) * 2) 0 #b3ad9e,
+    0 calc(var(--edge) * 3) 0 #f2ece0,
+    0 calc(var(--edge) * 4) 0 #b3ad9e,
+    0 calc(var(--edge) * 5) 0 #ece6d9,
+    0 calc(var(--edge) * 6) 0 #a9a394,
+    0 calc(var(--edge) * 7) 0 #ece6d9,
+    0 calc(var(--edge) * 8) 0 #a9a394,
+    0 calc(var(--edge) * 9) 0 #ded8ca,
+    0 calc(var(--edge) * 10) 0 #948e7d,
+    0 calc(var(--edge) * 12) calc(var(--edge) * 6) rgba(0, 0, 0, 0.6);
 }
 .uno-deck-stack.playable { cursor: pointer; }
 .uno-deck-stack.playable:hover { transform: translateY(-5px); }
