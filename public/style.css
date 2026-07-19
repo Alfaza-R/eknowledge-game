@@ -246,10 +246,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* deck + buangan REBAH di atas meja: rotateX disamain sama kemiringan meja (--tilt),
    perspective sendiri (terisolasi) biar gak rebutan layer sama felt. */
 .uno-piles {
-  display: flex; align-items: center; gap: 1.9rem;
-  transform: perspective(340px) rotateX(var(--tilt, 44deg));
+  display: flex; align-items: center; gap: 1.7rem;
+  transform: perspective(620px) rotateX(var(--tilt, 44deg));
   transform-origin: center 62%;
-  filter: drop-shadow(0 18px 15px rgba(0, 0, 0, 0.6));
+  /* JANGAN pakai filter di sini: elemen ber-transform 3D bakal di-raster ulang lalu
+     diperbesar perspektif → gambar kartu keliatan pecah. Bayangan diurus box-shadow kartu. */
 }
 
 /* deck numpuk rapi + TEBAL (kaya setumpuk kartu beneran) */
@@ -307,14 +308,15 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .uno-card.green { background: var(--uno-green); }
 .uno-card.blue { background: var(--uno-blue); }
 .uno-card.wild { background: conic-gradient(var(--uno-red) 0 25%, var(--uno-yellow) 0 50%, var(--uno-green) 0 75%, var(--uno-blue) 0); }
-.uno-card.discard { width: calc(var(--cw, 66px) * 1.35); font-size: 2.3rem; }
+.uno-card.discard { width: calc(var(--cw, 66px) * 1.15); font-size: 2rem; }
 
 /* tumpukan buangan tengah: kartu numpuk berantakan, ada TEBAL & bayangan antar kartu.
    Rebah dikit ngikut meja (perspective sendiri, terisolasi) tapi tetep kebaca. */
 .uno-discard-stack {
-  position: relative; width: calc(var(--cw, 66px) * 1.35); aspect-ratio: 826 / 1299;
-  /* miringnya diurus .uno-piles (rebah ngikut meja); di sini cukup bayangan tumpukannya */
-  filter: drop-shadow(0 8px 7px rgba(0, 0, 0, 0.45));
+  /* ukuran DISAMAIN sama deck (kartu UNO asli ukurannya sama) biar proporsional */
+  position: relative; width: calc(var(--cw, 66px) * 1.15); aspect-ratio: 826 / 1299;
+  /* miringnya diurus .uno-piles; bayangan diurus box-shadow tiap kartu (bukan filter,
+     biar gambar kartu gak ke-raster ulang & pecah pas kena perspektif) */
 }
 .uno-discard-stack .uno-card.discard,
 .uno-discard-stack .uno-card.discard.has-img {
