@@ -243,7 +243,14 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   width: 190%; height: 150%; border-radius: 50%; z-index: -1; pointer-events: none;
   background: radial-gradient(ellipse, rgba(8, 11, 18, 0.6) 0 50%, transparent 72%);
 }
-.uno-piles { display: flex; align-items: center; gap: 1.9rem; filter: drop-shadow(0 16px 14px rgba(0, 0, 0, 0.55)); }
+/* deck + buangan REBAH di atas meja: rotateX disamain sama kemiringan meja (--tilt),
+   perspective sendiri (terisolasi) biar gak rebutan layer sama felt. */
+.uno-piles {
+  display: flex; align-items: center; gap: 1.9rem;
+  transform: perspective(340px) rotateX(var(--tilt, 44deg));
+  transform-origin: center 62%;
+  filter: drop-shadow(0 18px 15px rgba(0, 0, 0, 0.6));
+}
 
 /* deck numpuk rapi (bukan berantakan) */
 .uno-deck-stack { position: relative; width: calc(var(--cw, 66px) * 1.15); aspect-ratio: 826 / 1299; flex: 0 0 auto; transition: transform 0.12s ease; }
@@ -287,8 +294,8 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
    Rebah dikit ngikut meja (perspective sendiri, terisolasi) tapi tetep kebaca. */
 .uno-discard-stack {
   position: relative; width: calc(var(--cw, 66px) * 1.35); aspect-ratio: 826 / 1299;
-  transform: perspective(760px) rotateX(13deg);
-  filter: drop-shadow(0 14px 12px rgba(0, 0, 0, 0.55)); /* bayangan tumpukan ke meja */
+  /* miringnya diurus .uno-piles (rebah ngikut meja); di sini cukup bayangan tumpukannya */
+  filter: drop-shadow(0 8px 7px rgba(0, 0, 0, 0.45));
 }
 .uno-discard-stack .uno-card.discard,
 .uno-discard-stack .uno-card.discard.has-img {
