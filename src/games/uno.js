@@ -390,10 +390,17 @@ module.exports = {
       return { ...c, group, playable, matchesTop: matches(c, top, state.currentColor) };
     });
 
+    // Urutan lawan DIPUTAR mulai dari pemain SESUDAH kita, biar tiap pemain lihat
+    // meja yang konsisten: kiri = giliran berikutnya, muter, kanan = pemain sebelumnya.
+    // (Dulu cuma di-filter tanpa diputar → cuma bener buat pemain pertama.)
+    const myIdx = state.order.indexOf(playerId);
+    const seatOrder = myIdx === -1
+      ? state.order.filter((id) => id !== playerId)
+      : [...state.order.slice(myIdx + 1), ...state.order.slice(0, myIdx)];
+
     return {
       myHand,
-      opponents: state.order
-        .filter((id) => id !== playerId)
+      opponents: seatOrder
         .map((id) => ({
           id,
           name: state.names[id],
