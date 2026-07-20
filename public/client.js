@@ -67,6 +67,8 @@ function show(name) {
     document.body.classList.remove("in-table-game");
     stopUnoTimer();
   }
+  // chat cuma nongol pas udah di dalam room (lobby / lagi main game apa pun)
+  showChat(name === "lobby" || name === "game");
 }
 function myName() {
   return $("input-name").value.trim() || nameFromUrl || "Guest";
@@ -1278,6 +1280,76 @@ window.addEventListener("resize", () => {
       renderUno(lastUnoView);
     }
   }, 150);
+});
+
+// ===========================================================================
+// CHAT (global) — sengaja dipasang di <body>, BUKAN di dalam render tiap game.
+// renderUno/renderLudo/dll nge-wipe isi #screen-game tiap update, jadi kalau chat
+// ditaro di dalem situ bakal keapus. Ditaro di body = otomatis jalan di SEMUA game,
+// termasuk game yang ditambahin nanti, tanpa perlu ngubah render-nya.
+// ===========================================================================
+let chatEl = null, chatLog = null, chatInput = null, chatUnread = 0, chatOpen = false;
+
+function ensureChat() {
+  if (chatEl) return chatEl;
+  chatEl = document.createElement("div");
+  chatEl.className = "chat-box hidden";
+  // panel duluan, tombol di bawah → panelnya kebuka ke ATAS (karena nempel pojok bawah)
+  chatEl.innerHTML = `
+    <div class="chat-panel">
+      <div class="chat-log"></div>
+      <form class="chat-form">
+        <input class="chat-input" type="text" maxlength="200" placeholder="Ketik pesan…" autocomplete="off" />
+        <button class="chat-send" type="submit" title="Kirim">➤</button>
+      </form>
+    </div>
+    <button class="chat-toggle" type="button">💬 <span>Chat</span><span class="chat-badge hidden">0</span></button>`;
+  document.body.appendChild(chatEl);
+  chatLog = chatEl.querySelector(".chat-log");
+  chatInput = chatEl.querySelector(".chat-input");
+  chatEl.querySelector(".chat-toggle").onclick = () => toggleChat();
+  chatEl.querySelector(".chat-form").onsubmit = (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text || !currentRoom) return;
+    socket.emit("chat", { roomId: currentRoom, text });
+    chatInput.value = "";
+  };
+  return chatEl;
+}
+function showChat(on) { ensureChat().classList.toggle("hidden", !on); }
+function toggleChat(force) {
+  ensureChat();
+  chatOpen = force === undefined ? !chatOpen : force;
+  chatEl.classList.toggle("open", chatOpen);
+  if (chatOpen) {
+    chatUnread = 0; updateChatBadge();
+    chatLog.scrollTop = chatLog.scrollHeight;
+    chatInput.focus();
+  }
+}
+function updateChatBadge() {
+  const b = chatEl.querySelector(".chat-badge");
+  b.textContent = chatUnread > 9 ? "9+" : String(chatUnread);
+  b.classList.toggle("hidden", chatUnread === 0);
+}
+function addChatMsg(m) {
+  ensureChat();
+  const mine = m.playerId === socket.id;
+  const row = document.createElement("div");
+  row.className = "chat-msg" + (mine ? " mine" : "");
+  row.innerHTML = `<span class="chat-name">${escapeHtml(mine ? "Kamu" : m.name)}</span><span class="chat-text">${escapeHtml(m.text)}</span>`;
+  chatLog.appendChild(row);
+  while (chatLog.children.length > 80) chatLog.removeChild(chatLog.firstChild);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  if (!chatOpen && !mine) { chatUnread++; updateChatBadge(); }
+}
+socket.on("chat", (m) => addChatMsg(m));
+socket.on("chatHistory", (list) => {
+  ensureChat();
+  chatLog.innerHTML = "";
+  (list || []).forEach(addChatMsg);
+  chatUnread = 0; updateChatBadge();
 });
 
 // ===========================================================================

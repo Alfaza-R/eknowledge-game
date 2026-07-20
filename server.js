@@ -62,6 +62,8 @@ const GRACE_MS = 90_000; // grace period sebelum pemain dianggap keluar (samain 
 const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau reconnect
 const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
 const turnTimers = new Map(); // roomId -> timeout
+const CHAT_MAX = 50;          // riwayat chat yang disimpen per room
+const lastChatAt = new Map(); // socketId -> timestamp terakhir kirim (rem anti-spam)
 const spillTimers = new Map(); // roomId -> timeout (re-broadcast pas spill kelar)
 
 // ---------------------------------------------------------------------------
@@ -165,7 +167,11 @@ io.on("connection", (socket) => {
     if (t) { clearTimeout(t); disconnectTimers.delete(socket.id); }
     for (const room of roomStore.rooms.values()) {
       const p = room.players.find((pl) => pl.id === socket.id);
-      if (p) { p.connected = true; socket.join(room.id); broadcastRoom(room); break; }
+      if (p) {
+        p.connected = true; socket.join(room.id);
+        socket.emit("chatHistory", room.chat || []); // pulihin isi chat juga
+        broadcastRoom(room); break;
+      }
     }
   }
 
@@ -177,6 +183,7 @@ io.on("connection", (socket) => {
     const playerName = (name || "Guest").slice(0, 20);
     const room = roomStore.createRoom(gameType, { id: socket.id, name: playerName });
     socket.join(room.id);
+    socket.emit("chatHistory", room.chat || []); // reset/isi panel chat
     if (cb) cb({ ok: true, roomId: room.id });
     broadcastRoom(room);
   });
@@ -192,6 +199,7 @@ io.on("connection", (socket) => {
       return;
     }
     socket.join(roomId);
+    socket.emit("chatHistory", result.room.chat || []); // pemain baru langsung liat chat sebelumnya
     if (cb) cb({ ok: true, roomId });
     broadcastRoom(result.room);
   });
@@ -249,8 +257,28 @@ io.on("connection", (socket) => {
     broadcastRoom(room);
   });
 
+  // --- CHAT (dipakai semua game; server yang nentuin nama & nyimpen riwayat) ---
+  socket.on("chat", ({ roomId, text }) => {
+    const room = roomStore.getRoom(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return; // bukan anggota room → tolak
+    const msg = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!msg) return;
+    const now = Date.now();
+    if (now - (lastChatAt.get(socket.id) || 0) < 350) return; // rem anti-spam
+    lastChatAt.set(socket.id, now);
+
+    if (!room.chat) room.chat = [];
+    const entry = { playerId: socket.id, name: player.name, text: msg, ts: now };
+    room.chat.push(entry);
+    if (room.chat.length > CHAT_MAX) room.chat.splice(0, room.chat.length - CHAT_MAX);
+    io.to(roomId).emit("chat", entry);
+  });
+
   // --- Putus koneksi ---
   socket.on("disconnect", () => {
+    lastChatAt.delete(socket.id);
     // cari room yang ada pemain ini
     for (const room of roomStore.rooms.values()) {
       const player = room.players.find((p) => p.id === socket.id);
