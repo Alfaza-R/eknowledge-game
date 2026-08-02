@@ -247,8 +247,11 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
    perspective sendiri (terisolasi) biar gak rebutan layer sama felt. */
 .uno-piles {
   display: flex; align-items: center; gap: 1.7rem;
-  transform: perspective(620px) rotateX(var(--tilt, 44deg));
-  transform-origin: center 62%;
+  /* Rebah 26° (lebih TEGAK dari meja biar kartu tetep utuh & kebaca — bukan kepotong).
+     Perspektif PROPORSIONAL ke ukuran kartu (--cw*12) biar foreshortening-nya KONSISTEN
+     di semua device (dulu fixed 340px → kartu gede di desktop keliatan kepotong parah). */
+  transform: perspective(calc(var(--cw, 66px) * 12)) rotateX(26deg);
+  transform-origin: center 60%;
   /* JANGAN pakai filter di sini: elemen ber-transform 3D bakal di-raster ulang lalu
      diperbesar perspektif → gambar kartu keliatan pecah. Bayangan diurus box-shadow kartu. */
 }
