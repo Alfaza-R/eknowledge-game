@@ -193,7 +193,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   transform: perspective(var(--persp, 1300px)) rotateX(var(--tilt, 0deg));
   transform-origin: center 58%;
   background:
-    url("assets/cards/meja.png") center/cover no-repeat,
+    url("assets/cards/meja%20v2.png") center/cover no-repeat,
     radial-gradient(ellipse 56% 50% at 50% 46%, #3b4570 0%, #263056 45%, transparent 72%),
     radial-gradient(ellipse at 50% 50%, #1b2138, #10152a);
   border: 1px solid var(--line);
