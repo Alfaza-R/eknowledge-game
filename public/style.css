@@ -250,7 +250,10 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   /* Rebah 26° (lebih TEGAK dari meja biar kartu tetep utuh & kebaca — bukan kepotong).
      Perspektif PROPORSIONAL ke ukuran kartu (--cw*12) biar foreshortening-nya KONSISTEN
      di semua device (dulu fixed 340px → kartu gede di desktop keliatan kepotong parah). */
-  transform: perspective(calc(var(--cw, 66px) * 16)) rotateX(12deg);
+  /* Sudut JELAS 36° (kartu keliatan rebah di meja) TAPI perspektif JAUH (--cw*38) →
+     kompresi MERATA (kartu utuh, bukan atas doang yang kena crush kaya perspektif deket).
+     Ini yang bikin keliatan "beneran ditaro di atas meja" tanpa kepotong. */
+  transform: perspective(calc(var(--cw, 66px) * 38)) rotateX(36deg);
   transform-origin: center 58%;
   /* JANGAN pakai filter di sini: elemen ber-transform 3D bakal di-raster ulang lalu
      diperbesar perspektif → gambar kartu keliatan pecah. Bayangan diurus box-shadow kartu. */
