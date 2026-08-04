@@ -922,6 +922,7 @@ function renderUno(view) {
     // Kartu dibungkus SLOT stabil yang nangkep hover — biar kartu naik tanpa geter.
     const slot = document.createElement("div");
     slot.className = "hand-slot";
+    slot.dataset.card = cardSig(card); // buat nyari slot kartu yg barusan ditarik (animasi nyempil)
     if (selected) slot.classList.add("selected");
     else if (inSelection && !selectable) slot.classList.add("dimmed");
     if (selectable || selected) slot.onclick = () => tapCard(i);
@@ -1110,16 +1111,36 @@ function victoryPop(byId, g, rank) {
   if (rank === 1 || byId === g.youId) confettiBurst();
 }
 
-// DRAW: kartu meluncur dari deck ke tangan. Diri sendiri → flip kebuka; lawan → tetap punggung.
+// tanda tangan kartu (buat cocokin slot di tangan)
+function cardSig(c) { return c.kind + "|" + (c.color || "") + "|" + (c.value ?? ""); }
+// cari slot kartu yang barusan ditarik di kipas — ambil dari KANAN (kartu baru cenderung ke kanan)
+function findDrawnSlot(card) {
+  const sig = cardSig(card);
+  const slots = [...document.querySelectorAll(".uno-hand-fan .hand-slot")];
+  for (let i = slots.length - 1; i >= 0; i--) if (slots[i].dataset.card === sig) return slots[i];
+  return null;
+}
+
+// DRAW: kartu meluncur dari deck lalu NYEMPIL ke slot-nya di kipas tangan.
+// Diri sendiri → flip kebuka + selip ke posisi kartunya; lawan → tetap punggung ke arah kursinya.
 function flyDraw(byId, youId, drawnCard) {
   const deck = document.querySelector(".uno-deck-stack") || document.querySelector(".uno-back.deck");
   if (!deck) return;
   const from = deck.getBoundingClientRect();
-  let target = null;
-  if (byId === youId) target = document.querySelector(".uno-hand-fan");
-  else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) target = s; });
-  const to = target ? target.getBoundingClientRect() : from;
   const isMe = byId === youId;
+
+  // target: kalau diri sendiri → SLOT kartu yang barusan ditarik (biar nyempil pas di tempatnya)
+  let target = null, targetSlot = null, targetAng = 0;
+  if (isMe && drawnCard) targetSlot = findDrawnSlot(drawnCard);
+  if (targetSlot) {
+    target = targetSlot.querySelector(".uno-card") || targetSlot;
+    targetAng = parseFloat(targetSlot.style.getPropertyValue("--ang")) || 0;
+  } else if (isMe) {
+    target = document.querySelector(".uno-hand-fan");
+  } else {
+    document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) target = s; });
+  }
+  const to = target ? target.getBoundingClientRect() : from;
 
   // kartu teratas deck naik 5px dulu (80ms) baru kartu meluncur
   const topDeck = document.querySelector(".uno-deck-stack .uno-back.deck");
@@ -1148,16 +1169,27 @@ function flyDraw(byId, youId, drawnCard) {
   }
   document.body.appendChild(flip);
 
+  // sembunyiin slot asli selama kartu terbang → pas mendarat baru muncul (biar keliatan "diselipin")
+  if (targetSlot) targetSlot.style.opacity = "0";
+
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
   const dy = to.top + to.height / 2 - (from.top + from.height / 2);
   const rotY = showFace ? 180 : 0;
+  const rotZ = targetSlot ? targetAng : 0; // ikutin kemiringan slot di kipas
 
+  // busur: diangkat dikit di tengah, lalu diselipin turun ke celah kipas
   flip.animate([
-    { offset: 0, transform: "translate(0px,0px) scale(0.95) rotateY(0deg)" },
-    { offset: 0.5, transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(1) rotateY(${rotY * 0.5}deg)` },
-    { offset: 1, transform: `translate(${dx}px, ${dy}px) scale(1) rotateY(${rotY}deg)` },
-  ], { duration: 430, delay: 80, fill: "forwards", easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)" });
-  setTimeout(() => flip.remove(), 560);
+    { offset: 0,    transform: "translate(0px,0px) scale(0.94) rotateY(0deg) rotate(0deg)" },
+    { offset: 0.55, transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 20}px) scale(1.06) rotateY(${rotY * 0.55}deg) rotate(${rotZ * 0.4}deg)`, easing: "ease-in" },
+    { offset: 0.86, transform: `translate(${dx}px, ${dy + 6}px) scale(1) rotateY(${rotY}deg) rotate(${rotZ}deg)` },
+    { offset: 1,    transform: `translate(${dx}px, ${dy}px) scale(1) rotateY(${rotY}deg) rotate(${rotZ}deg)` },
+  ], { duration: 500, delay: 80, fill: "forwards", easing: "cubic-bezier(0.34, 1.4, 0.6, 1)" });
+
+  // pas mendarat: munculin slot asli + efek "tuck" kecil, terus hapus si ghost
+  setTimeout(() => {
+    if (targetSlot) { targetSlot.style.opacity = ""; targetSlot.classList.add("slot-tuck"); setTimeout(() => targetSlot.classList.remove("slot-tuck"), 260); }
+    flip.remove();
+  }, 600);
 }
 
 function primaryBtn(text, onClick) {

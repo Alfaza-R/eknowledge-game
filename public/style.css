@@ -250,8 +250,8 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   /* Rebah 26° (lebih TEGAK dari meja biar kartu tetep utuh & kebaca — bukan kepotong).
      Perspektif PROPORSIONAL ke ukuran kartu (--cw*12) biar foreshortening-nya KONSISTEN
      di semua device (dulu fixed 340px → kartu gede di desktop keliatan kepotong parah). */
-  transform: perspective(calc(var(--cw, 66px) * 12)) rotateX(20deg);
-  transform-origin: center 60%;
+  transform: perspective(calc(var(--cw, 66px) * 16)) rotateX(12deg);
+  transform-origin: center 58%;
   /* JANGAN pakai filter di sini: elemen ber-transform 3D bakal di-raster ulang lalu
      diperbesar perspektif → gambar kartu keliatan pecah. Bayangan diurus box-shadow kartu. */
 }
@@ -412,6 +412,14 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 }
 .fly-flip .face-back { transform: rotateY(180deg); }
 .fly-flip .face-back .uno-card { border: none; box-shadow: none; }
+
+/* efek "nyempil": pas kartu tarikan mendarat, slot-nya di kipas nyelip masuk (mepet lalu pas) */
+.uno-hand-fan .hand-slot.slot-tuck .uno-card { animation: slotTuck 0.26s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes slotTuck {
+  0%   { transform: translateY(calc(var(--cw, 66px) * -0.35)) scale(1.08); }
+  60%  { transform: translateY(3px) scale(0.99); }
+  100% { transform: none; }
+}
 
 /* kursi lawan */
 .uno-seat {
