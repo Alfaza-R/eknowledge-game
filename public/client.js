@@ -1057,15 +1057,20 @@ function flyPlay(byId, youId, n, playedCard) {
   else document.querySelectorAll(".uno-seat").forEach((s) => { if (s.dataset.pid === byId) source = s; });
   const from = source ? source.getBoundingClientRect() : to;
 
-  const startL = from.left + from.width / 2 - to.width / 2;
-  const startT = from.top + from.height / 2 - to.height / 2;
-  const dx = to.left - startL, dy = to.top - startT;
+  // Kartu terbang pakai aspek KARTU ASLI (826/1299), BUKAN ukuran rect discard yang
+  // udah gepeng gara-gara miring — kalau ikut yang gepeng, object-fit cover motong kartu.
+  const cardW = to.width;
+  const cardH = cardW * 1299 / 826;
+  const toCx = to.left + to.width / 2, toCy = to.top + to.height / 2;   // pusat discard
+  const startL = from.left + from.width / 2 - cardW / 2;
+  const startT = from.top + from.height / 2 - cardH / 2;
+  const dx = toCx - cardW / 2 - startL, dy = toCy - cardH / 2 - startT; // mendarat pas di tengah discard
   const arc = Math.max(40, Math.hypot(dx, dy) * 0.22 + 30); // tinggi lengkungan
   const rot = Math.round(Math.random() * 16 - 8);           // -8..8 pas mendarat
 
   const el = unoCardEl(playedCard, {});
   el.classList.add("fly-play-card");
-  el.style.width = to.width + "px"; el.style.height = to.height + "px";
+  el.style.width = cardW + "px"; el.style.height = cardH + "px";
   el.style.left = startL + "px"; el.style.top = startT + "px";
   document.body.appendChild(el);
 
@@ -1149,10 +1154,16 @@ function flyDraw(byId, youId, drawnCard) {
     { duration: 200, easing: "ease-out" }
   );
 
+  // pakai aspek KARTU ASLI (826/1299), bukan rect deck yang udah gepeng gara-gara miring
+  // (kalau ikut yang gepeng, muka kartu kena crop object-fit cover)
+  const cardW = from.width;
+  const cardH = cardW * 1299 / 826;
+  const fromCx = from.left + from.width / 2, fromCy = from.top + from.height / 2;
+
   const flip = document.createElement("div");
   flip.className = "fly-flip";
-  flip.style.width = from.width + "px"; flip.style.height = from.height + "px";
-  flip.style.left = from.left + "px"; flip.style.top = from.top + "px";
+  flip.style.width = cardW + "px"; flip.style.height = cardH + "px";
+  flip.style.left = (fromCx - cardW / 2) + "px"; flip.style.top = (fromCy - cardH / 2) + "px";
 
   const front = document.createElement("div");
   front.className = "face face-front"; // punggung kartu
