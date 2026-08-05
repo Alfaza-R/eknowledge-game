@@ -183,8 +183,7 @@ module.exports = {
       const h = state.hands[playerId];
       if (!h || state.finished.includes(playerId)) return false;
       if (state.unoCalled && state.unoCalled[playerId]) return false; // udah teriak
-      // boleh sebelum (sisa 2, mau buang kartu kedua terakhir) atau sesudah (sisa 1)
-      return h.length === 1 || h.length === 2;
+      return h.length === 1; // cuma pas sisa 1 kartu (abis buang kartu kedua terakhir)
     }
     if (move.type === "catchUno") {
       const tid = move.targetId;
@@ -480,11 +479,11 @@ module.exports = {
       youId: playerId,
       // ---- UNO call ----
       iCalledUno: !!(state.unoCalled && state.unoCalled[playerId]),
-      // boleh teriak pas sisa 2 (sebelum buang kartu kedua terakhir) atau sisa 1 (sesudah)
+      // teriak UNO cuma pas sisa 1 kartu (abis buang kartu kedua terakhir)
       canCallUno:
         !state.finished.includes(playerId) &&
         !(state.unoCalled && state.unoCalled[playerId]) &&
-        (hand.length === 1 || hand.length === 2),
+        hand.length === 1, // tombol UNO! cuma nongol pas sisa 1 kartu
       spillActive,
       spillUntil: spillActive ? state.spillUntil : null,
       // kartu yang barusan gua tarik (buat animasi flip) — cuma ke penariknya, gak bocor ke lawan
