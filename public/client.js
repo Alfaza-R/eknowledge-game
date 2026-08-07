@@ -61,6 +61,7 @@ const screens = {
 let pendingJoinRoom = null; // kode room yang mau dimasukin (nunggu isi nama)
 function show(name) {
   for (const k in screens) screens[k].classList.toggle("hidden", k !== name);
+  document.body.classList.remove("uno-bg"); // renderUno nyalain lagi kalau emang Uno (Ludo pakai uno-mode juga)
   if (name !== "game") {
     $("game-root").classList.remove("wide");
     screens.game.classList.remove("uno-mode");
@@ -76,7 +77,7 @@ function myName() {
 
 // ---- Avatar ---- (file: 2.png .. 14.png = 13 avatar)
 const AVATAR_MIN = 2, AVATAR_MAX = 14;
-const avatarUrl = (n) => `assets/avatars/${n}.png`;
+const avatarUrl = (n) => `assets/avatars/${n}.jpg`;
 // avatar terpilih (default acak; server juga fallback acak kalau gak kekirim)
 let selectedAvatar = AVATAR_MIN + Math.floor(Math.random() * (AVATAR_MAX - AVATAR_MIN + 1));
 // bangun picker di layar home & join; klik → pilih & highlight
@@ -753,6 +754,7 @@ function renderUno(view) {
   root.classList.add("uno-mode");
   $("game-root").classList.add("wide");
   document.body.classList.add("in-table-game"); // minta landscape di HP
+  document.body.classList.add("uno-bg");         // background khusus Uno (dihapus di show())
   root.innerHTML = "";
 
   const firstDeal = prevStatus !== "playing";

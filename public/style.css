@@ -36,6 +36,13 @@ body {
   padding: 1rem;
   -webkit-font-smoothing: antialiased;
 }
+/* background KHUSUS game Uno (dipasang lewat body.uno-bg dari renderUno) */
+body.uno-bg {
+  background:
+    linear-gradient(rgba(6, 10, 20, 0.32), rgba(6, 10, 20, 0.5)),
+    url("assets/cards/uno-bg.jpg") center center / cover no-repeat fixed;
+  background-color: var(--bg);
+}
 
 #game-root { width: 100%; max-width: 460px; transition: max-width 0.25s ease; }
 #game-root.wide { max-width: min(1120px, 96vw); }

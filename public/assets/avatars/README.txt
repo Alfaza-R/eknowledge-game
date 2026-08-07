@@ -1,1 +1,1 @@
-Taro aset avatar di sini. Konvensi nama: av1.png, av2.png, ... (urut).
+Avatar pemain: 2.jpg .. 14.jpg (256x256, JPEG). Ganti jumlah? update AVATAR_MIN/MAX di client.js & server.js.
