@@ -74,19 +74,22 @@ function myName() {
   return $("input-name").value.trim() || nameFromUrl || "Guest";
 }
 
+// ---- Avatar ---- (file: 2.png .. 14.png = 13 avatar)
+const AVATAR_MIN = 2, AVATAR_MAX = 14;
+const avatarUrl = (n) => `assets/avatars/${n}.png`;
 // avatar terpilih (default acak; server juga fallback acak kalau gak kekirim)
-let selectedAvatar = 1 + Math.floor(Math.random() * 10);
+let selectedAvatar = AVATAR_MIN + Math.floor(Math.random() * (AVATAR_MAX - AVATAR_MIN + 1));
 // bangun picker di layar home & join; klik → pilih & highlight
 function renderAvatarPickers() {
   for (const id of ["avatar-picker-home", "avatar-picker-join"]) {
     const c = document.getElementById(id);
     if (!c) continue;
     c.innerHTML = "";
-    for (let n = 1; n <= 10; n++) {
+    for (let n = AVATAR_MIN; n <= AVATAR_MAX; n++) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "avatar-opt" + (n === selectedAvatar ? " sel" : "");
-      b.innerHTML = `<span class="pfp-init">${n}</span><img class="pfp-img" src="assets/avatars/av${n}.png" alt="" onerror="this.remove()">`;
+      b.innerHTML = `<span class="pfp-init">${n}</span><img class="pfp-img" src="${avatarUrl(n)}" alt="" onerror="this.remove()">`;
       b.onclick = () => { selectedAvatar = n; renderAvatarPickers(); };
       c.appendChild(b);
     }
@@ -718,10 +721,6 @@ function unoCardEl(card, { playable = false, onClick = null } = {}) {
 
 // huruf awal nama — dipakai sebagai fallback kalau avatar gak ke-load
 function initial(name) { return ((name || "?").trim().charAt(0) || "?").toUpperCase(); }
-
-// ---- Avatar ----
-const AVATAR_COUNT = 10;
-const avatarUrl = (n) => `assets/avatars/av${n}.png`;
 // isi kotak avatar: inisial (fallback) + foto di atasnya (onerror → foto ilang, inisial nongol)
 function avatarInner(av, name) {
   const init = `<span class="pfp-init">${initial(name)}</span>`;

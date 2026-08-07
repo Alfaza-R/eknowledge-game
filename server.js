@@ -63,8 +63,8 @@ const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau r
 const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
 const turnTimers = new Map(); // roomId -> timeout
 const CHAT_MAX = 50;          // riwayat chat yang disimpen per room
-const AVATAR_MAX = 10;        // jumlah aset avatar (av1..av10)
-const pickAvatar = (a) => { const n = Math.round(Number(a)); return n >= 1 && n <= AVATAR_MAX ? n : 1 + Math.floor(Math.random() * AVATAR_MAX); };
+const AVATAR_MIN = 2, AVATAR_MAX = 14; // aset avatar: 2.png .. 14.png (13 biji)
+const pickAvatar = (a) => { const n = Math.round(Number(a)); return n >= AVATAR_MIN && n <= AVATAR_MAX ? n : AVATAR_MIN + Math.floor(Math.random() * (AVATAR_MAX - AVATAR_MIN + 1)); };
 const lastChatAt = new Map(); // socketId -> timestamp terakhir kirim (rem anti-spam)
 const spillTimers = new Map(); // roomId -> timeout (re-broadcast pas spill kelar)
 
