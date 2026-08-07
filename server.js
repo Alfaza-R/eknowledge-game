@@ -63,6 +63,8 @@ const disconnectTimers = new Map(); // socketId -> timeout, buat batalin kalau r
 const TURN_MS = Number(process.env.TURN_MS) || 60_000; // batas waktu per giliran (auto-skip kalau lewat)
 const turnTimers = new Map(); // roomId -> timeout
 const CHAT_MAX = 50;          // riwayat chat yang disimpen per room
+const AVATAR_MAX = 10;        // jumlah aset avatar (av1..av10)
+const pickAvatar = (a) => { const n = Math.round(Number(a)); return n >= 1 && n <= AVATAR_MAX ? n : 1 + Math.floor(Math.random() * AVATAR_MAX); };
 const lastChatAt = new Map(); // socketId -> timestamp terakhir kirim (rem anti-spam)
 const spillTimers = new Map(); // roomId -> timeout (re-broadcast pas spill kelar)
 
@@ -78,10 +80,13 @@ function viewFor(room, playerId) {
     youAreHost: room.hostId === playerId,
     players: room.players.map((p) => ({
       name: p.name,
+      avatar: p.avatar,
       connected: p.connected,
       isHost: p.id === room.hostId,
       isYou: p.id === playerId,
     })),
+    // map socketId -> avatar, biar render tiap game (opponents/players by id) bisa nampilin avatar
+    avatars: Object.fromEntries(room.players.map((p) => [p.id, p.avatar])),
   };
 
   if (room.status === "playing" || room.status === "finished") {
@@ -176,12 +181,12 @@ io.on("connection", (socket) => {
   }
 
   // --- Bikin room ---
-  socket.on("createRoom", ({ name, game }, cb) => {
+  socket.on("createRoom", ({ name, game, avatar }, cb) => {
     // Tiap page WordPress kirim ?game=... (tictactoe/ludo/uno). Kalau game-nya belum
     // ada / belum diimplement, fallback ke tictactoe biar gak error.
     const gameType = games[game] ? game : "tictactoe";
     const playerName = (name || "Guest").slice(0, 20);
-    const room = roomStore.createRoom(gameType, { id: socket.id, name: playerName });
+    const room = roomStore.createRoom(gameType, { id: socket.id, name: playerName, avatar: pickAvatar(avatar) });
     socket.join(room.id);
     socket.emit("chatHistory", room.chat || []); // reset/isi panel chat
     if (cb) cb({ ok: true, roomId: room.id });
@@ -189,11 +194,11 @@ io.on("connection", (socket) => {
   });
 
   // --- Gabung room ---
-  socket.on("joinRoom", ({ roomId, name }, cb) => {
+  socket.on("joinRoom", ({ roomId, name, avatar }, cb) => {
     const playerName = (name || "Guest").slice(0, 20);
     const existing = roomStore.getRoom(roomId);
     const maxPlayers = existing && games[existing.gameType] ? games[existing.gameType].maxPlayers : 2;
-    const result = roomStore.joinRoom(roomId, { id: socket.id, name: playerName }, maxPlayers);
+    const result = roomStore.joinRoom(roomId, { id: socket.id, name: playerName, avatar: pickAvatar(avatar) }, maxPlayers);
     if (!result.ok) {
       if (cb) cb({ ok: false, error: result.error });
       return;

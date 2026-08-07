@@ -37,7 +37,7 @@ function createRoom(gameType, host) {
     id,
     gameType,
     hostId: host.id,
-    players: [{ id: host.id, name: host.name, connected: true }],
+    players: [{ id: host.id, name: host.name, avatar: host.avatar, connected: true }],
     status: "lobby",
     state: null,
     result: null,
@@ -58,7 +58,7 @@ function joinRoom(roomId, player, maxPlayers = 2) {
   if (room.status !== "lobby") return { ok: false, error: "Game udah mulai" };
   if (room.players.length >= maxPlayers) return { ok: false, error: "Room udah penuh" };
 
-  room.players.push({ id: player.id, name: player.name, connected: true });
+  room.players.push({ id: player.id, name: player.name, avatar: player.avatar, connected: true });
   return { ok: true, room };
 }
 

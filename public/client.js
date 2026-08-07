@@ -74,6 +74,25 @@ function myName() {
   return $("input-name").value.trim() || nameFromUrl || "Guest";
 }
 
+// avatar terpilih (default acak; server juga fallback acak kalau gak kekirim)
+let selectedAvatar = 1 + Math.floor(Math.random() * 10);
+// bangun picker di layar home & join; klik → pilih & highlight
+function renderAvatarPickers() {
+  for (const id of ["avatar-picker-home", "avatar-picker-join"]) {
+    const c = document.getElementById(id);
+    if (!c) continue;
+    c.innerHTML = "";
+    for (let n = 1; n <= 10; n++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "avatar-opt" + (n === selectedAvatar ? " sel" : "");
+      b.innerHTML = `<span class="pfp-init">${n}</span><img class="pfp-img" src="assets/avatars/av${n}.png" alt="" onerror="this.remove()">`;
+      b.onclick = () => { selectedAvatar = n; renderAvatarPickers(); };
+      c.appendChild(b);
+    }
+  }
+}
+
 // ===========================================================================
 // LAYAR PILIH GAME
 // ===========================================================================
@@ -119,7 +138,7 @@ $("btn-enter").onclick = () => {
   const name = $("input-name-join").value.trim();
   if (!name) { $("join-error").textContent = "Isi nama kamu dulu ya 🙂"; return; }
   show("loading");
-  socket.emit("joinRoom", { roomId: pendingJoinRoom, name }, (res) => {
+  socket.emit("joinRoom", { roomId: pendingJoinRoom, name, avatar: selectedAvatar }, (res) => {
     if (res.ok) currentRoom = res.roomId;
     else { $("join-error").textContent = res.error || "Gagal masuk"; show("join"); }
   });
@@ -136,7 +155,7 @@ $("btn-join-select").onclick = () => {
 // LAYAR HOME (bikin / gabung buat game terpilih)
 // ===========================================================================
 $("btn-create").onclick = () => {
-  socket.emit("createRoom", { name: myName(), game: chosenGame }, (res) => {
+  socket.emit("createRoom", { name: myName(), game: chosenGame, avatar: selectedAvatar }, (res) => {
     if (res.ok) currentRoom = res.roomId;
     else $("home-error").textContent = res.error || "Gagal bikin room";
   });
@@ -171,7 +190,7 @@ function renderLobby(view) {
     let badge = "";
     if (!p.connected) badge = '<span class="badge off">terputus…</span>';
     else if (p.isHost) badge = '<span class="badge host">host</span>';
-    li.innerHTML = `<span>${escapeHtml(p.name)}${p.isYou ? " (kamu)" : ""}</span>${badge}`;
+    li.innerHTML = `<div class="pl-left"><div class="pfp lobby-pfp">${avatarInner(p.avatar, p.name)}</div><span>${escapeHtml(p.name)}${p.isYou ? " (kamu)" : ""}</span></div>${badge}`;
     list.appendChild(li);
   }
 
@@ -511,7 +530,7 @@ function renderLudo(view) {
   for (const p of g.players) {
     const row = document.createElement("div");
     row.className = "ludo-prow" + (p.isTurn ? " turn" : "");
-    row.innerHTML = `<span class="dotc ${p.color}"></span>${escapeHtml(p.name)}${p.id === g.currentTurnPlayerId ? "" : ""} <b>${p.done}/4</b>`;
+    row.innerHTML = `<div class="pfp ludo-pfp">${avatarInner(view.avatars && view.avatars[p.id], p.name)}</div><span class="dotc ${p.color}"></span>${escapeHtml(p.name)} <b>${p.done}/4</b>`;
     plist.appendChild(row);
   }
   panel.appendChild(plist);
@@ -697,8 +716,17 @@ function unoCardEl(card, { playable = false, onClick = null } = {}) {
   return el;
 }
 
-// huruf awal nama buat avatar placeholder (nanti diganti PNG dari user)
+// huruf awal nama — dipakai sebagai fallback kalau avatar gak ke-load
 function initial(name) { return ((name || "?").trim().charAt(0) || "?").toUpperCase(); }
+
+// ---- Avatar ----
+const AVATAR_COUNT = 10;
+const avatarUrl = (n) => `assets/avatars/av${n}.png`;
+// isi kotak avatar: inisial (fallback) + foto di atasnya (onerror → foto ilang, inisial nongol)
+function avatarInner(av, name) {
+  const init = `<span class="pfp-init">${initial(name)}</span>`;
+  return av ? `${init}<img class="pfp-img" src="${avatarUrl(av)}" alt="" onerror="this.remove()">` : init;
+}
 
 // punggung kartu placeholder (nanti diganti PNG)
 function unoBackEl(extra = "") {
@@ -876,7 +904,7 @@ function renderUno(view) {
     const countHtml = o.done
       ? '<span class="seat-count done">selesai</span>'
       : `<span class="seat-count">🂠 ${o.count}${o.count === 1 && o.calledUno ? ' <span class="uno-badge">UNO!</span>' : ""}</span>`;
-    info.innerHTML = `<div class="uno-avatar">${initial(o.name)}</div>
+    info.innerHTML = `<div class="uno-avatar">${avatarInner(view.avatars && view.avatars[o.id], o.name)}</div>
       <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>${countHtml}</div>`;
     seat.appendChild(info);
 
@@ -1301,7 +1329,7 @@ socket.on("connect", () => {
   // Kalau cuma ?room= tanpa nama, init() bakal munculin layar isi nama.
   if (roomFromUrl && !currentRoom && nameFromUrl) {
     show("loading");
-    socket.emit("joinRoom", { roomId: roomFromUrl, name: nameFromUrl }, (res) => {
+    socket.emit("joinRoom", { roomId: roomFromUrl, name: nameFromUrl, avatar: selectedAvatar }, (res) => {
       if (res.ok) currentRoom = res.roomId;
       else init();
     });
@@ -1400,6 +1428,7 @@ socket.on("chatHistory", (list) => {
 // ===========================================================================
 function init() {
   buildGameList();
+  renderAvatarPickers();
   if (roomFromUrl && nameFromUrl) show("loading");     // nama udah ada → auto-join
   else if (roomFromUrl) showJoinScreen(roomFromUrl);   // ada kode link → isi nama dulu
   else if (gameFromUrl && GAMES[gameFromUrl]) openHome(gameFromUrl); // deep-link 1 game
