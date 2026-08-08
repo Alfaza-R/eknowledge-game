@@ -444,13 +444,13 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
    megang/hold kartunya di depan dada. Sengaja TANPA background (biar karakternya
    "berdiri" natural di atas meja, bukan kekurung kotak) — drop-shadow buat grounding. */
 .seat-bust {
-  width: 72px; aspect-ratio: 1 / 1; margin: 0 auto -18px; position: relative; z-index: 2;
+  width: 72px; aspect-ratio: 1 / 1; margin: 0 auto -18px; position: relative; z-index: 1;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.55));
 }
 .seat-bust .pfp-img { object-position: top center; }
 .seat-bust .pfp-init { font-size: 1.8rem; color: rgba(255, 255, 255, 0.55); }
 .uno-seat.turn .seat-bust { filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6)); }
-.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; position: relative; z-index: 1; }
+.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; position: relative; z-index: 2; }
 .seat-info {
   display: flex; align-items: center; gap: 6px;
   background: rgba(8, 11, 18, 0.86); border: 1px solid var(--line);
@@ -469,8 +469,10 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .ludo-pfp { width: 24px; height: 24px; border-radius: 7px; font-size: 0.72rem; }
 .pl-left { display: flex; align-items: center; gap: 10px; }
 
-/* picker avatar di layar isi nama */
+/* picker avatar di layar isi nama — default cuma nampilin dikit + tombol "lihat lainnya",
+   biar gak sekaligus 12 lingkaran kepampang pas layar isi nama masih ringkes */
 .avatar-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 0.35rem 0 1.1rem; }
+.avatar-picker.collapsed { grid-template-columns: repeat(4, 1fr); } /* 3 avatar + 1 tombol "lihat lainnya" */
 .avatar-opt {
   width: auto; margin: 0; padding: 0; aspect-ratio: 1; border-radius: 50%;
   position: relative; overflow: hidden; cursor: pointer;
@@ -480,6 +482,9 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 }
 .avatar-opt:hover { transform: translateY(-2px); }
 .avatar-opt.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91, 147, 255, 0.4); }
+/* tombol "+N lihat lainnya" — gaya beda dari avatar (dashed, gak ada foto) */
+.avatar-more { background: rgba(255, 255, 255, 0.06); border-style: dashed; border-color: var(--line); color: var(--muted); font-size: 0.82rem; }
+.avatar-more:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--accent); color: var(--fg); }
 .seat-meta { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .seat-name { font-size: 0.8rem; font-weight: 700; max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seat-count { font-size: 0.75rem; color: var(--muted); }

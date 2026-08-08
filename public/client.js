@@ -77,22 +77,41 @@ function myName() {
 
 // ---- Avatar ---- (file: 2.png .. 14.png = 13 avatar)
 const AVATAR_MIN = 2, AVATAR_MAX = 13; // v2: 12 avatar (png transparan)
+const AVATAR_PREVIEW = 3; // picker cuma nampilin ini duluan, sisanya di balik "lihat lainnya"
 const avatarUrl = (n) => `assets/avatars/${n}.png`;
 // avatar terpilih (default acak; server juga fallback acak kalau gak kekirim)
 let selectedAvatar = AVATAR_MIN + Math.floor(Math.random() * (AVATAR_MAX - AVATAR_MIN + 1));
+let avatarPickerExpanded = false;
 // bangun picker di layar home & join; klik → pilih & highlight
 function renderAvatarPickers() {
+  const all = [];
+  for (let n = AVATAR_MIN; n <= AVATAR_MAX; n++) all.push(n);
+  // avatar yang lagi kepilih didahuluin biar tetep keliatan walau belum expand
+  const ordered = [selectedAvatar, ...all.filter((n) => n !== selectedAvatar)];
+  const shown = avatarPickerExpanded ? ordered : ordered.slice(0, AVATAR_PREVIEW);
+  const hiddenCount = all.length - shown.length;
+
   for (const id of ["avatar-picker-home", "avatar-picker-join"]) {
     const c = document.getElementById(id);
     if (!c) continue;
+    c.classList.toggle("collapsed", !avatarPickerExpanded);
     c.innerHTML = "";
-    for (let n = AVATAR_MIN; n <= AVATAR_MAX; n++) {
+    for (const n of shown) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "avatar-opt" + (n === selectedAvatar ? " sel" : "");
       b.innerHTML = `<span class="pfp-init">${n}</span><img class="pfp-img" src="${avatarUrl(n)}" alt="" onerror="this.remove()">`;
       b.onclick = () => { selectedAvatar = n; renderAvatarPickers(); };
       c.appendChild(b);
+    }
+    if (hiddenCount > 0) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "avatar-opt avatar-more";
+      more.title = "Lihat avatar lainnya";
+      more.innerHTML = `<span>+${hiddenCount}</span>`;
+      more.onclick = () => { avatarPickerExpanded = true; renderAvatarPickers(); };
+      c.appendChild(more);
     }
   }
 }

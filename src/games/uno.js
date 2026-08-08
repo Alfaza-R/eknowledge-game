@@ -161,6 +161,7 @@ module.exports = {
       drawnThisTurn: false,
       pendingDraw: 0, // total tarik yang lagi "gantung" dari tumpukan plus
       spillUntil: 0,  // timestamp: sampai kapan semua kartu ke-spill (spill card)
+      spillBy: null,  // pemain yang mainin kartu spill — tangannya SENDIRI gak ikut ke-spill
       lastDrawCard: null, // kartu terakhir yang ditarik (buat animasi flip, cuma ke penarik)
       unoCalled: {},  // playerId -> udah teriak UNO buat sisa kartu sekarang?
       winner: null,   // juara pertama (kartu habis duluan)
@@ -360,8 +361,9 @@ module.exports = {
       advance(s, active.length === 2 && cards.length % 2 === 1 ? 2 : 1);
       desc += " — arah dibalik";
     } else if (group === "act:spill") {
-      s.spillUntil = Date.now() + 10000; // semua kartu keliatan 10 detik
-      desc += " — 👀 SEMUA kartu ke-spill 10 detik!";
+      s.spillUntil = Date.now() + 10000; // semua kartu LAWAN keliatan 10 detik
+      s.spillBy = pid; // tangan pemain INI sendiri gak ikut ke-spill (cuma dia yang liat ke lawan)
+      desc += " — 👀 semua kartu LAWAN ke-spill 10 detik!";
       advance(s, 1);
     } else {
       advance(s, 1); // angka / wild biasa
@@ -464,8 +466,10 @@ module.exports = {
           calledUno: !!(state.unoCalled && state.unoCalled[id]),
           // sisa 1 kartu tapi belum teriak → bisa ditangkep pemain lain
           catchable: state.hands[id].length === 1 && !(state.unoCalled && state.unoCalled[id]) && !state.finished.includes(id),
-          // pas spill aktif, kartu lawan keliatan (cuma data tampilan)
-          revealHand: spillActive ? state.hands[id].map((c) => ({ kind: c.kind, color: c.color, value: c.value })) : null,
+          // pas spill aktif, kartu lawan keliatan ke SEMUA ORANG — KECUALI tangan
+          // pemain yang mainin kartu spill-nya sendiri (dia gak ikut ke-spill, tapi
+          // dia BISA liat kartu lawan lain karena kondisi ini gak berlaku pas id !== spillBy)
+          revealHand: spillActive && id !== state.spillBy ? state.hands[id].map((c) => ({ kind: c.kind, color: c.color, value: c.value })) : null,
         })),
       topCard: top,
       recentDiscard: state.discardPile.slice(-5), // 2–5 kartu terakhir buat tumpukan berantakan
