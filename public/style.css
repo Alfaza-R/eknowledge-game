@@ -499,7 +499,12 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
 .avatar-opt:hover { transform: translateY(-2px); }
-.avatar-opt.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91, 147, 255, 0.4); }
+/* avatar yang lagi kepilih: gedein + ring kuning biar jelas beda dari yang lain */
+.avatar-opt.sel {
+  border-color: var(--uno-yellow); border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(242, 180, 0, 0.5), 0 4px 16px rgba(242, 180, 0, 0.4);
+  transform: scale(1.22); z-index: 2;
+}
 /* tombol "+N lihat lainnya" — gaya beda dari avatar (dashed, gak ada foto) */
 .avatar-more { background: rgba(255, 255, 255, 0.06); border-style: dashed; border-color: var(--line); color: var(--muted); font-size: 0.82rem; }
 .avatar-more:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--accent); color: var(--fg); }
