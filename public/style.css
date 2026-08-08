@@ -292,9 +292,27 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
     /* bayangan jatuh: cahaya dari KANAN → ke KIRI-bawah, kecil & lembut (bukan gede lurus bawah) */
     calc(var(--edge) * -2) calc(var(--edge) * 11) calc(var(--edge) * 3.5) rgba(0, 0, 0, 0.4);
 }
-.uno-deck-stack.playable { cursor: pointer; }
+/* pemain HARUS narik: bukan garis hijau kaku lagi — glow hijau lembut napas +
+   kilau (shine) yang nyapu di permukaan kartu teratas, biar keliatan "hidup". */
+.uno-deck-stack.playable { cursor: pointer; animation: deckGlow 1.6s ease-in-out infinite; }
 .uno-deck-stack.playable:hover { transform: translateY(-5px); }
-.uno-deck-stack.playable .uno-back.deck:nth-child(1) { outline: 2px solid var(--ok); outline-offset: 2px; }
+.uno-deck-stack.playable .uno-back.deck:nth-child(1) { overflow: hidden; }
+.uno-deck-stack.playable .uno-back.deck:nth-child(1)::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, 0.7) 47%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.7) 53%, transparent 75%);
+  background-size: 260% 100%;
+  animation: deckShine 2.4s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+@keyframes deckGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--ok)); }
+  50% { filter: drop-shadow(0 0 13px var(--ok)); }
+}
+@keyframes deckShine {
+  0%   { background-position: 160% 0; }
+  55%  { background-position: -60% 0; }
+  100% { background-position: -60% 0; }
+}
 .uno-color { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--fg); font-weight: 600; }
 .uno-color span { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 .uno-color.red span { background: var(--uno-red); }
@@ -304,7 +322,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* kartu (muka) */
 .uno-card {
-  width: var(--cw, 66px); aspect-ratio: 826 / 1299; border-radius: 0; flex: 0 0 auto; position: relative;
+  width: var(--cw, 66px); aspect-ratio: 826 / 1299; border-radius: 7%; flex: 0 0 auto; position: relative;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.7rem; font-weight: 800; color: #fff; user-select: none;
   border: 2px solid rgba(255, 255, 255, 0.9);
@@ -371,7 +389,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* punggung kartu (placeholder — ganti dengan background-image PNG nanti) */
 .uno-back {
-  width: 48px; aspect-ratio: 826 / 1299; border-radius: 0; flex: 0 0 auto; position: relative;
+  width: 48px; aspect-ratio: 826 / 1299; border-radius: 7%; flex: 0 0 auto; position: relative;
   overflow: hidden;
   background:
     url("assets/cards/backfrop%20card.png") center/cover no-repeat,
@@ -444,7 +462,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
    megang/hold kartunya di depan dada. Sengaja TANPA background (biar karakternya
    "berdiri" natural di atas meja, bukan kekurung kotak) — drop-shadow buat grounding. */
 .seat-bust {
-  width: 72px; aspect-ratio: 1 / 1; margin: 0 auto -18px; position: relative; z-index: 1;
+  width: 96px; aspect-ratio: 1 / 1; margin: 0 auto -24px; position: relative; z-index: 1;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.55));
 }
 .seat-bust .pfp-img { object-position: top center; }
@@ -902,7 +920,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 @media (max-height: 520px) {
   .uno-stage { --tilt: 36deg; --persp: 1000px; } /* HP: miringin lebih landai biar kebaca */
   .uno-hand-fan { bottom: 5%; transform: translateX(-50%) scale(1); } /* HP: turunin dikit biar gak nabrak tumpukan tengah */
-  .seat-bust { width: 46px; margin-bottom: -11px; }
+  .seat-bust { width: 60px; margin-bottom: -14px; }
   .seat-bust .pfp-init { font-size: 1.1rem; }
   .seat-info { padding: 2px 5px; gap: 4px; border-radius: 8px; }
   .seat-name { font-size: 0.62rem; max-width: 60px; }
