@@ -1084,7 +1084,7 @@ function renderUno(view) {
       controls.appendChild(primaryBtn("Lewati", () => emitMove({ type: "pass" })));
     }
   }
-  if (controls.children.length) root.appendChild(controls);
+  if (controls.children.length) stage.appendChild(controls); // di STAGE (bukan root) biar posisinya nempel ke MEJA, bukan viewport
 
   // ===== animasi berdasarkan event terakhir =====
   const ev = g.lastEvent;
