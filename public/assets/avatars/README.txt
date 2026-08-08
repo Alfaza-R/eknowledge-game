@@ -1,1 +1,1 @@
-Avatar pemain: 2.jpg .. 14.jpg (256x256, JPEG). Ganti jumlah? update AVATAR_MIN/MAX di client.js & server.js.
+Avatar pemain v2: 2.png .. 13.png (PNG transparan, 260px). Ganti jumlah? update AVATAR_MIN/MAX di client.js & server.js.

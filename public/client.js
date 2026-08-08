@@ -76,8 +76,8 @@ function myName() {
 }
 
 // ---- Avatar ---- (file: 2.png .. 14.png = 13 avatar)
-const AVATAR_MIN = 2, AVATAR_MAX = 14;
-const avatarUrl = (n) => `assets/avatars/${n}.jpg`;
+const AVATAR_MIN = 2, AVATAR_MAX = 13; // v2: 12 avatar (png transparan)
+const avatarUrl = (n) => `assets/avatars/${n}.png`;
 // avatar terpilih (default acak; server juga fallback acak kalau gak kekirim)
 let selectedAvatar = AVATAR_MIN + Math.floor(Math.random() * (AVATAR_MAX - AVATAR_MIN + 1));
 // bangun picker di layar home & join; klik → pilih & highlight
@@ -194,7 +194,7 @@ function renderLobby(view) {
     let badge = "";
     if (!p.connected) badge = '<span class="badge off">terputus…</span>';
     else if (p.isHost) badge = '<span class="badge host">host</span>';
-    li.innerHTML = `<div class="pl-left"><div class="pfp lobby-pfp">${avatarInner(p.avatar, p.name)}</div><span>${escapeHtml(p.name)}${p.isYou ? " (kamu)" : ""}</span></div>${badge}`;
+    li.innerHTML = `<div class="pl-left"><div class="pfp lobby-pfp pfp-bg">${avatarInner(p.avatar, p.name)}</div><span>${escapeHtml(p.name)}${p.isYou ? " (kamu)" : ""}</span></div>${badge}`;
     list.appendChild(li);
   }
 
@@ -534,7 +534,7 @@ function renderLudo(view) {
   for (const p of g.players) {
     const row = document.createElement("div");
     row.className = "ludo-prow" + (p.isTurn ? " turn" : "");
-    row.innerHTML = `<div class="pfp ludo-pfp">${avatarInner(view.avatars && view.avatars[p.id], p.name)}</div><span class="dotc ${p.color}"></span>${escapeHtml(p.name)} <b>${p.done}/4</b>`;
+    row.innerHTML = `<div class="pfp ludo-pfp pfp-bg">${avatarInner(view.avatars && view.avatars[p.id], p.name)}</div><span class="dotc ${p.color}"></span>${escapeHtml(p.name)} <b>${p.done}/4</b>`;
     plist.appendChild(row);
   }
   panel.appendChild(plist);
@@ -875,6 +875,12 @@ function renderUno(view) {
     seat.style.setProperty("--ry", ry.toFixed(1) + "deg");
     seat.style.setProperty("--far", far.toFixed(2));
 
+    // BUST avatar (PNG transparan) nangkring di atas kipas → keliatan kaya lagi hold kartunya
+    const bust = document.createElement("div");
+    bust.className = "seat-bust";
+    bust.innerHTML = avatarInner(view.avatars && view.avatars[o.id], o.name);
+    seat.appendChild(bust);
+
     // kipas punggung = jumlah kartu asli lawan (kalau udah selesai, gak usah)
     const fan = document.createElement("div");
     fan.className = "seat-fan";
@@ -905,8 +911,7 @@ function renderUno(view) {
     const countHtml = o.done
       ? '<span class="seat-count done">selesai</span>'
       : `<span class="seat-count">🂠 ${o.count}${o.count === 1 && o.calledUno ? ' <span class="uno-badge">UNO!</span>' : ""}</span>`;
-    info.innerHTML = `<div class="uno-avatar">${avatarInner(view.avatars && view.avatars[o.id], o.name)}</div>
-      <div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>${countHtml}</div>`;
+    info.innerHTML = `<div class="seat-meta"><span class="seat-name">${escapeHtml(o.name)}</span>${countHtml}</div>`;
     seat.appendChild(info);
 
     // lawan sisa 1 kartu tapi LUPA teriak → tombol tangkep (dia kena tarik 2)

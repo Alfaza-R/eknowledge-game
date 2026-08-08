@@ -440,19 +440,22 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
   opacity: calc(1 - 0.26 * var(--far, 0));
   filter: blur(calc(var(--far, 0) * 0.7px)) brightness(calc(1 - 0.13 * var(--far, 0)));
 }
-.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; }
+/* BUST: avatar PNG transparan gede, nangkring di atas kipas → kesan pemain lagi
+   megang/hold kartunya di depan dada. Sengaja TANPA background (biar karakternya
+   "berdiri" natural di atas meja, bukan kekurung kotak) — drop-shadow buat grounding. */
+.seat-bust {
+  width: 72px; aspect-ratio: 1 / 1; margin: 0 auto -18px; position: relative; z-index: 2;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.55));
+}
+.seat-bust .pfp-img { object-position: top center; }
+.seat-bust .pfp-init { font-size: 1.8rem; color: rgba(255, 255, 255, 0.55); }
+.uno-seat.turn .seat-bust { filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6)); }
+.seat-fan { display: flex; justify-content: center; align-items: flex-end; height: 64px; overflow: visible; position: relative; z-index: 1; }
 .seat-info {
   display: flex; align-items: center; gap: 6px;
   background: rgba(8, 11, 18, 0.86); border: 1px solid var(--line);
   border-radius: 10px; padding: 4px 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px);
-}
-.uno-avatar {
-  width: 38px; height: 38px; border-radius: 9px; flex: 0 0 auto;
-  position: relative; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; color: #fff; font-size: 1rem;
-  background: linear-gradient(135deg, #5b93ff, #7a3ff0);
 }
 
 /* ===== Avatar (foto pemain) ===== */
@@ -460,8 +463,10 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .pfp-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pfp-init { font-weight: 800; color: #fff; }
 .pfp { position: relative; overflow: hidden; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
-.lobby-pfp { width: 34px; height: 34px; border-radius: 9px; font-size: 0.95rem; background: linear-gradient(135deg, #5b93ff, #7a3ff0); }
-.ludo-pfp { width: 24px; height: 24px; border-radius: 7px; font-size: 0.72rem; background: linear-gradient(135deg, #5b93ff, #7a3ff0); }
+/* avatar v2 = PNG transparan → butuh background sendiri di belakangnya */
+.pfp-bg { background: linear-gradient(135deg, #5b93ff, #262b36); }
+.lobby-pfp { width: 34px; height: 34px; border-radius: 9px; font-size: 0.95rem; }
+.ludo-pfp { width: 24px; height: 24px; border-radius: 7px; font-size: 0.72rem; }
 .pl-left { display: flex; align-items: center; gap: 10px; }
 
 /* picker avatar di layar isi nama */
@@ -469,7 +474,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 .avatar-opt {
   width: auto; margin: 0; padding: 0; aspect-ratio: 1; border-radius: 50%;
   position: relative; overflow: hidden; cursor: pointer;
-  border: 2px solid transparent; background: #2a2f3a;
+  border: 2px solid transparent; background: linear-gradient(135deg, #5b93ff, #262b36);
   display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 800; font-size: 0.9rem;
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
@@ -481,7 +486,6 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 /* pemain yang lagi giliran: kursinya (avatar+nama) jadi gede & paling depan */
 .uno-seat.turn { --sScale: 1.32; z-index: 7; opacity: 1; filter: none; }
 .uno-seat.turn .seat-info { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(91, 147, 255, 0.45); }
-.uno-seat.turn .uno-avatar { box-shadow: 0 0 0 2px var(--accent); }
 .uno-seat.turn .seat-name { color: var(--accent); }
 .uno-badge { color: var(--danger); font-weight: 800; font-size: 0.68rem; animation: unoPulse 0.9s ease-in-out infinite; display: inline-block; }
 
@@ -870,7 +874,7 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 
 /* lawan yang udah selesai */
 .uno-seat.done { opacity: 0.7; }
-.uno-seat.done .uno-avatar { box-shadow: 0 0 0 2px var(--ok); }
+.uno-seat.done .seat-bust { filter: drop-shadow(0 0 6px var(--ok)) drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5)); }
 .seat-medal { font-size: 1.7rem; }
 .seat-count.done { color: var(--ok); font-weight: 700; }
 
@@ -893,7 +897,8 @@ button.ghost:hover { background: rgba(91, 147, 255, 0.08); }
 @media (max-height: 520px) {
   .uno-stage { --tilt: 36deg; --persp: 1000px; } /* HP: miringin lebih landai biar kebaca */
   .uno-hand-fan { bottom: 5%; transform: translateX(-50%) scale(1); } /* HP: turunin dikit biar gak nabrak tumpukan tengah */
-  .uno-avatar { width: 26px; height: 26px; font-size: 0.72rem; border-radius: 7px; }
+  .seat-bust { width: 46px; margin-bottom: -11px; }
+  .seat-bust .pfp-init { font-size: 1.1rem; }
   .seat-info { padding: 2px 5px; gap: 4px; border-radius: 8px; }
   .seat-name { font-size: 0.62rem; max-width: 60px; }
   .seat-count { font-size: 0.6rem; }
